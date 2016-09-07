@@ -87,8 +87,12 @@ cdef inline void _sample_dirichlet(gsl_rng * rng,
 
     if all_below_min == 1:
         k = _sample_categorical(rng, alpha)
-        out[k] = 1
-        sumkg += 1 - MIN_GAMMA_VALUE
+        if k == -1:
+            out[0] = -1
+            sumkg = 1
+        else:
+            out[k] = 1
+            sumkg += 1 - MIN_GAMMA_VALUE
 
     for k in range(K):
         out[k] /= sumkg
@@ -108,6 +112,12 @@ cdef inline double _sample_beta(gsl_rng * rng, double a, double b) nogil:
     """
     cdef:
         double g1, g2, p, u
+
+    if a <= MIN_GAMMA_VALUE and b > MIN_GAMMA_VALUE:
+        return 0.
+
+    if b <= MIN_GAMMA_VALUE and a > MIN_GAMMA_VALUE:
+        return 1.
 
     g1 = _sample_gamma(rng, a, 1.)
     g2 = _sample_gamma(rng, b, 1.)

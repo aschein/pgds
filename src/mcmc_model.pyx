@@ -143,7 +143,7 @@ cdef class MCMCModel:
                 self._generate_data()
                 self._calc_funcs(funcs, n, fwd)
 
-                self._update(5, 0, schedule)
+                self._update(10, 0, schedule)
                 self._generate_data()
                 self._calc_funcs(funcs, n, rev)
 

@@ -159,7 +159,7 @@ cdef class GammaSliceSampler(SliceSampler):
         self.scale = init_scale
         self.data_size = 1
         self.data_sum = 1
-        super(GammaSliceSampler , self).__init__(seed)
+        super(GammaSliceSampler, self).__init__(seed)
 
     cdef double _logprob(self, double x, int which_var=0) nogil:
         """
