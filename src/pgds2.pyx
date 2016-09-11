@@ -43,7 +43,7 @@ cdef extern from "gsl/gsl_randist.h" nogil:
 cdef class PGDS(MCMCModel):
 
     cdef:
-        int T, V, K, shrink
+        int T, V, K, shrink, stationary, steady
         double tau, gam, beta, eps, start_time
         double[::1] nu_K, xi_K, delta_T, zeta_T, P_K
         double[:,::1] Pi_KK, Theta_TK, shp_KK, Phi_KV
@@ -53,7 +53,8 @@ cdef class PGDS(MCMCModel):
         unsigned int[::1] N_K, N_V
 
     def __init__(self, int T, int V, int K, double eps=0.1, double gam=10.,
-                 double tau=1., int shrink=1, object seed=None):
+                 double tau=1., int shrink=1, int stationary=0, int steady=0,
+                 object seed=None):
 
         assert T > 1
         self.T = T
@@ -63,6 +64,10 @@ cdef class PGDS(MCMCModel):
         self.gam = gam
         self.tau = tau
         self.shrink = shrink
+        self.stationary = stationary
+        self.steady = steady
+        if steady == 1 and stationary == 0:
+            raise ValueError('Steady-state only valid for stationary model.')
 
         self.beta = 1.
         self.nu_K = np.zeros(K)
@@ -157,8 +162,11 @@ cdef class PGDS(MCMCModel):
             assert self.Phi_KV[k, 0] >= 0
 
         self.delta_T[0] = 0
-        for t in range(1, self.T):
-            self.delta_T[t] = _sample_gamma(rng, eps, 1. / eps)
+        if self.stationary == 0:
+            for t in range(1, self.T):
+                self.delta_T[t] = _sample_gamma(rng, eps, 1. / eps)
+        else:
+            self.delta_T[1:] = _sample_gamma(rng, eps, 1. / eps)
 
         self._update_zeta_T()
 
@@ -201,10 +209,13 @@ cdef class PGDS(MCMCModel):
             int t
             double tmp
 
-        self.zeta_T[self.T-1] = 0
-        for t in range(self.T-2,-1,-1):
-            tmp = (self.zeta_T[t+1] + self.delta_T[t+1]) / self.tau
-            self.zeta_T[t] = self.tau * log1p(tmp)
+        if self.steady == 1:
+            self.zeta_T[:] = _simulate_zeta(self.tau, self.tau, self.delta_T[1])
+        else:
+            self.zeta_T[self.T-1] = 0
+            for t in range(self.T-2,-1,-1):
+                tmp = (self.zeta_T[t+1] + self.delta_T[t+1]) / self.tau
+                self.zeta_T[t] = self.tau * log1p(tmp)
 
     cdef void _update_Y_TVK(self):
         cdef:
@@ -241,12 +252,19 @@ cdef class PGDS(MCMCModel):
     cdef void _update_L_TKK(self):
         cdef:
             int t, k, k1, m
-            double r
+            double r, mu, zeta
             unsigned int l_tk, l_tkk
 
         self.L_TK[:] = 0
         self.L_KK[:] = 0
         self.L_TKK[:] = 0
+
+        if self.steady == 1:
+            self._update_zeta_T()
+            zeta = self.zeta_T[self.T-1]
+            for k in range(self.K):
+                mu = zeta * self.Theta_TK[self.T-1, k]
+                self.L_TK[self.T-1, k] = gsl_ran_poisson(self.rng, mu)
 
         for t in range(self.T-2, -1, -1):
             for k in range(self.K):
@@ -304,10 +322,15 @@ cdef class PGDS(MCMCModel):
             int t
             double shape, scale
 
-        for t in range(1, self.T):
-            shape = self.eps + self.Y_T[t]
-            scale = 1. / (self.eps + np.sum(self.Theta_TK[t, :]))
-            self.delta_T[t] = _sample_gamma(self.rng, shape, scale)
+        if self.stationary == 0:
+            for t in range(1, self.T):
+                shape = self.eps + self.Y_T[t]
+                scale = 1. / (self.eps + np.sum(self.Theta_TK[t, :]))
+                self.delta_T[t] = _sample_gamma(self.rng, shape, scale)
+        else:
+            shape = self.eps + np.sum(self.Y_T)
+            scale = 1. / (self.eps + np.sum(self.Theta_TK[1:]))
+            self.delta_T[1:] = _sample_gamma(self.rng, shape, scale)
 
     cdef void _update_Pi_KK(self):
         cdef:
@@ -343,7 +366,7 @@ cdef class PGDS(MCMCModel):
         nu = np.sum(self.nu_K)
         indices = range(self.K)
         np.random.shuffle(indices)
-        for k in indices:  # TODO: Randomize the order
+        for k in indices:
             xi_k = self.xi_K[k]
             nu_k = self.nu_K[k]
             a_k = nu_k * (xi_k + nu - nu_k)
