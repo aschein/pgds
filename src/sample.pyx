@@ -56,5 +56,8 @@ cdef class Sampler:
     cpdef int sumcrt(self, int[::1] M, double[::1] R):
         return _sample_sumcrt(self.rng, M, R)
 
+    cpdef int sumlog(self, int n, double p):
+        return _sample_sumlog(self.rng, n, p)
+
     cpdef int truncated_poisson(self, double mu):
         return _sample_truncated_poisson(self.rng, mu)

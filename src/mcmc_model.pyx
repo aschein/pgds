@@ -11,6 +11,7 @@
 import sys
 import numpy as np
 cimport numpy as np
+import scipy.stats as st
 from numpy.random import randint
 from pp_plot import pp_plot
 
@@ -120,7 +121,8 @@ cdef class MCMCModel:
 
         funcs = {
             'Arith. Mean': np.mean,
-            'Geom. Mean': lambda x: np.exp(np.log1p(x).mean()),
+            # 'Geom. Mean': lambda x: np.exp(np.log1p(x).mean()),
+            'Entropy mean': lambda x: np.mean(st.entropy(x)),
             'Var.': np.var,
             'Max.': np.max
         }
@@ -143,7 +145,7 @@ cdef class MCMCModel:
                 self._generate_data()
                 self._calc_funcs(funcs, n, fwd)
 
-                self._update(10, 0, schedule)
+                self._update(5, 0, schedule)
                 self._generate_data()
                 self._calc_funcs(funcs, n, rev)
 

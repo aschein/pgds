@@ -22,6 +22,7 @@ cdef extern from "gsl/gsl_randist.h" nogil:
     double gsl_rng_uniform(gsl_rng * r)
     unsigned int gsl_ran_poisson(gsl_rng * r, double mu)
     double gsl_ran_gamma(gsl_rng * r, double a, double b)
+    unsigned int gsl_ran_logarithmic (const gsl_rng * r, double p)
 
 DEF MIN_GAMMA_SHAPE = 1e-5
 DEF MIN_GAMMA_SCALE = 1e-5
@@ -248,6 +249,34 @@ cdef inline int _sample_sumcrt(gsl_rng * rng, int[::1] M, double[::1] R) nogil:
         else:
             l += lk
 
+
+cdef inline int _sample_sumlog(gsl_rng * rng, int n, double p) nogil:
+    """
+    Sample a SumLog random variable defined as the sum of n iid Logarithmic rvs:
+
+        y ~ \sum_{i=1}^n Logarithmic(p)
+
+    Arguments:
+        rng -- Pointer to a GSL random number generator object
+        n -- Parameter for number of iid Logarithmic rvs
+        p -- Probability parameter of the Logarithmic distribution
+    """
+    cdef:
+        int i, out
+
+    if p <= 0 or p >= 1 or n < 0:
+        return -1  # this represents an error
+
+    if n == 0:
+        return 0
+
+    out = 0
+    for i in range(n):
+        out += gsl_ran_logarithmic(rng, p)
+    return out
+
+
+
 cdef inline int _sample_truncated_poisson(gsl_rng * rng, double mu) nogil:
     """
     Sample a truncated Poisson random variable as described by Zhou (2015) [1].
@@ -292,5 +321,6 @@ cdef class Sampler:
     cpdef int searchsorted(self, double val, double[::1] arr)
     cpdef int crt(self, int m, double r)
     cpdef int sumcrt(self, int[::1] M, double[::1] R)
+    cpdef int sumlog(self, int n, double p)
     cpdef int truncated_poisson(self, double mu)
 

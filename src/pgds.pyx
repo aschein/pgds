@@ -15,8 +15,9 @@ from time import time
 
 from libc.math cimport sqrt, exp, log, log1p
 from mcmc_model cimport MCMCModel
-from sample cimport _sample_gamma, _sample_dirichlet, _sample_beta, _sample_crt
+from sample cimport _sample_gamma, _sample_dirichlet, _sample_beta, _sample_crt, _sample_sumlog
 from lambertw cimport _simulate_zeta
+from pp_plot import pp_plot
 
 cdef extern from "gsl/gsl_rng.h" nogil:
     ctypedef struct gsl_rng:
@@ -48,6 +49,8 @@ cdef class PGDS(MCMCModel):
     def __init__(self, int V, int T, int K, double eps=0.1, double alpha=1.,
                  double gam=1., double tau = 1., int stationary=1, int steady=1,
                  int diagonal=0, int binary=0, int shrink=0, object seed=None):
+
+        assert T > 1
 
         self.V = V
         self.T = T
@@ -155,13 +158,10 @@ cdef class PGDS(MCMCModel):
                 _sample_dirichlet(rng, self.shp_KK[k], self.Pi_KK[k])
                 assert self.Pi_KK[k, 0] >= 0
 
-        self.tau = _sample_gamma(rng, 1., 1.)
-
         shape = self.tau * self.alpha
         scale = 1. / self.tau
         for k in range(K):
             self.Theta_TK[0, k] = _sample_gamma(rng, shape, scale)
-
         for t in range(1, self.T):
             for k in range(K):
                 shape = self.tau * np.dot(self.Theta_TK[t-1], self.Pi_KK[:, k])
@@ -284,12 +284,12 @@ cdef class PGDS(MCMCModel):
                 self.L_TK[self.T-1, k] = gsl_ran_poisson(self.rng, mu)
 
         for t in range(self.T-2, -1, -1):
-            for k2 in range(self.K):
-                m = self.Y_TK[t+1, k2] + self.L_TK[t+1, k2]
+            for k in range(self.K):
+                m = self.Y_TK[t+1, k] + self.L_TK[t+1, k]
                 
                 norm = 0
                 for k1 in range(self.K):
-                    self.P_K[k1] = self.Theta_TK[t, k1] * self.Pi_KK[k1, k2]
+                    self.P_K[k1] = self.Theta_TK[t, k1] * self.Pi_KK[k1, k]
                     norm += self.P_K[k1]
                 r = self.tau * norm
     
@@ -310,9 +310,9 @@ cdef class PGDS(MCMCModel):
 
                     for k1 in range(self.K):
                         l_tkk = self.N_K[k1]
-                        self.L_TKK[t, k1, k2] = l_tkk
+                        self.L_TKK[t, k1, k] = l_tkk
                         self.L_TK[t, k1] += l_tkk
-                        self.L_KK[k1, k2] += l_tkk
+                        self.L_KK[k1, k] += l_tkk
 
         assert np.sum(self.L_TKK) == np.sum(self.L_KK) 
         if self.stationary == 0 or self.steady == 0:
@@ -453,14 +453,6 @@ cdef class PGDS(MCMCModel):
             scale = 1. / (self.eps - nu_k * log(w_k))
             self.xi_K[k] = xi_k = _sample_gamma(self.rng, shape, scale)
 
-            # for k2 in range(self.K):
-            #     if k2 == k:
-            #         continue
-
-            #     m = L_KK[k, k2]
-            #     r = nu_k * self.nu_K[k2]
-            #     h_k += _sample_crt(self.rng, m, r)
-
     cdef void _update_nu_K(self):
         pass
 
@@ -470,9 +462,204 @@ cdef class PGDS(MCMCModel):
     cdef void _update_tau(self):
         pass
 
+    cdef void _alt_alt_generate(self):
+        cdef:
+            int t, k, k2, m_tk, y_tk, l_tk, m_0k
+            double eps, tau, zeta_init, p_tk, p_t, tmp
 
-    cpdef void alt_schein(self, int num_samples):
-        
+        eps = self.eps
+        tau = self.tau
+
+        self._generate_state()
+
+        self.delta_T[0] = 0
+        for t in range(1, self.T):
+            self.delta_T[t] = _sample_gamma(self.rng, eps, 1. / eps)
+
+        self._update_zeta_T()
+
+        self.L_TKK[:] = 0
+        self.L_TK[:] = 0
+        self.L_KK[:] = 0
+        self.Y_T[:] = 0
+        self.Y_TK[:] = 0
+
+        for t in range(self.T):
+            for k in range(self.K):
+                if t == 0:
+                    shape = self.tau * self.alpha
+                    scale = 1. / self.tau
+                    tmp = _sample_gamma(self.rng, shape, scale)
+                    m_tk = gsl_ran_poisson(self.rng, tmp * (self.zeta_T[0] + self.delta_T[0]))
+                else:
+                    l_tk = self.L_TK[t-1, k]
+                    p_t = -np.expm1(-self.zeta_T[t-1] / tau)
+                    m_tk = _sample_sumlog(self.rng, l_tk, p_t)
+
+                if not m_tk >= 0:
+                    print p_t, self.zeta_T[t-1], tau, -np.expm1(-self.zeta_T[t-1] / tau)
+
+                p_tk = self.delta_T[t] / (self.zeta_T[t] + self.delta_T[t])
+                y_tk = self.Y_TK[t, k] = np.random.binomial(m_tk, p_tk)
+                self.Y_T[t] += y_tk
+                l_tk = m_tk - y_tk
+                
+                if t == self.T-1:
+                    assert l_tk == 0
+
+                elif t == 0:
+                    assert y_tk == 0
+
+                if l_tk > 0:
+                    gsl_ran_multinomial(self.rng,
+                                        self.K,
+                                        <unsigned int> l_tk,
+                                        &self.Pi_KK[k, 0],
+                                        &self.N_K[0])
+
+                    for k2 in range(self.K):
+                        self.L_TKK[t, k, k2] = self.N_K[k2]
+                        self.L_TK[t, k] += self.N_K[k2]
+                        self.L_KK[k, k2] += self.N_K[k2]
+
+    cdef void _alt_generate(self):
+        cdef:
+            int t, k, k2, l_tk
+            double mu, theta, delta, zeta
+
+        eps = self.eps
+        tau = self.tau
+
+        self._generate_state()
+
+        self.delta_T[0] = 0
+        for t in range(1, self.T):
+            self.delta_T[t] = _sample_gamma(self.rng, eps, 1. / eps)
+        self._update_zeta_T()
+
+        self.L_TKK[:] = 0
+        self.L_TK[:] = 0
+        self.L_KK[:] = 0
+        self.Y_T[:] = 0
+        self.Y_TK[:] = 0
+
+        for t in range(self.T):
+            delta = self.delta_T[t]
+            zeta = self.zeta_T[t]
+            for k in range(self.K):
+                theta = self.Theta_TK[t, k]
+                
+                mu = theta * delta
+                self.Y_TK[t, k] = gsl_ran_poisson(self.rng, mu)
+                self.Y_T[t] += self.Y_TK[t, k]
+                if t == 0:
+                    assert self.Y_TK[t, k] == 0
+
+                mu = theta * zeta
+                self.L_TK[t, k] = l_tk = gsl_ran_poisson(self.rng, mu)
+                if t == self.T-1:
+                    assert l_tk == 0
+
+                if l_tk > 0:
+                    gsl_ran_multinomial(self.rng,
+                                        self.K,
+                                        <unsigned int> l_tk,
+                                        &self.Pi_KK[k, 0],
+                                        &self.N_K[0])
+
+                    for k2 in range(self.K):
+                        self.L_TKK[t, k, k2] = self.N_K[k2]
+                        self.L_KK[k, k2] += self.N_K[k2]
 
 
+    cdef void _alt_update(self, int num_itns, int verbose, dict schedule):
+        """
+        Perform inference.
+        """
+
+        cdef:
+            int n
+
+        for n in range(num_itns):
+            for k, _, update_func in self._alt_get_variables():
+                if k not in schedule.keys() or n >= schedule[k]:
+                    update_func(self)
+            if verbose != 0:
+                print n
+                if (n + 1) % 1 == 0:
+                    self._print_state()
+
+    cdef list _alt_get_variables(self):
+        """
+        Return variable names, values, and sampling methods for testing.
+        """
+        return [('xi_K', self.xi_K, self._update_xi_K),
+                ('nu_K', self.nu_K, self._update_nu_K),
+                ('Theta_TK', self.Theta_TK, self._update_Theta_TK),
+                ('Pi_KK', self.Pi_KK, self._update_Pi_KK),
+                ('L_TKK', self.L_TKK, self._update_L_TKK),
+                ('L_TK', self.L_TK, lambda x: None),
+                ('L_KK', self.L_KK, lambda x: None),
+                ('Y_TK', self.Y_TK, lambda x: None)]
+
+    cdef void _alt_test(self, int num_samples, dict schedule={}):
+
+        cdef:
+            int n
+            dict funcs, fwd, rev
+
+        funcs = {
+            'Arith. Mean': np.mean,
+            'Geom. Mean': lambda x: np.exp(np.log1p(x).mean()),
+            'Var.': np.var,
+            'Max.': np.max
+        }
+
+        fwd, rev = {}, {}
+        for k, v, _ in self._alt_get_variables():
+            if np.isscalar(v):
+                fwd[k] = np.empty(num_samples)
+                rev[k] = np.empty(num_samples)
+            else:
+                fwd[k] = {}
+                rev[k] = {}
+                for f in funcs:
+                    fwd[k][f] = np.empty(num_samples)
+                    rev[k][f] = np.empty(num_samples)
+
+        for n in range(num_samples):
+            self._alt_generate()
+            self._alt_calc_funcs(funcs, n, fwd)
+
+            self._alt_update(10, 0, schedule)
+            # self._generate_data()
+            # self._update_Theta_TK()
+            # self._update_L_TKK()
+            # self._update_Pi_KK()
+            self._alt_calc_funcs(funcs, n, rev)
+
+            if n % 500 == 0:
+                print n
+
+        for k, _, _ in self._alt_get_variables():
+            if not np.isinf(schedule[k]):
+                pp_plot(fwd[k], rev[k], k)
+
+    cdef void _alt_calc_funcs(self, dict funcs, int n, dict out):
+        """
+        Helper function for _test. Calculates and stores functions of variables.
+        """
+
+        for k, v, _ in self._alt_get_variables():
+            if np.isscalar(v):
+                out[k][n] = v
+            else:
+                for f, func in funcs.iteritems():
+                    out[k][f][n] = func(v)
+
+    cpdef void alt_schein(self, int num_samples, dict schedule={}):
+        """
+        Wrapper around _test(...).
+        """
+        self._alt_test(num_samples, schedule)
 
