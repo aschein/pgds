@@ -56,7 +56,6 @@ cdef class PGDS(MCMCModel):
                  double tau=1., int shrink=1, int stationary=0, int steady=0,
                  object seed=None):
 
-        assert T > 1
         self.T = T
         self.V = V
         self.K = K
@@ -161,12 +160,11 @@ cdef class PGDS(MCMCModel):
             _sample_dirichlet(rng, np.ones(self.V) * eps, self.Phi_KV[k])
             assert self.Phi_KV[k, 0] >= 0
 
-        self.delta_T[0] = 0
         if self.stationary == 0:
-            for t in range(1, self.T):
+            for t in range(self.T):
                 self.delta_T[t] = _sample_gamma(rng, eps, 1. / eps)
         else:
-            self.delta_T[1:] = _sample_gamma(rng, eps, 1. / eps)
+            self.delta_T[:] = _sample_gamma(rng, eps, 1. / eps)
 
         self._update_zeta_T()
 
@@ -189,8 +187,6 @@ cdef class PGDS(MCMCModel):
                 y_tk = gsl_ran_poisson(self.rng, mu)
                 self.Y_TK[t, k] = y_tk
                 self.Y_T[t] += y_tk
-                if t == 0:
-                    assert y_tk == 0
 
                 if y_tk > 0:
                     gsl_ran_multinomial(self.rng,
@@ -291,20 +287,24 @@ cdef class PGDS(MCMCModel):
     cdef void _update_Theta_TK(self):
         cdef:
             int k, t
-            double shape, scale
+            double shape, scale, tau
+            list indices
 
         self._update_zeta_T()
 
-        scale = 1. / (self.tau + self.zeta_T[0] + self.delta_T[0])
-        for k in range(self.K):
-            shape = self.tau * self.nu_K[k] + self.L_TK[0, k] + self.Y_TK[0, k]
-            self.Theta_TK[0, k] = _sample_gamma(self.rng, shape, scale)
+        tau = self.tau
+        indices = range(self.K)
         
-        for t in range(1, self.T):
-            for k in range(self.K):
-                shape = self.L_TK[t, k] + self.Y_TK[t, k] + \
-                        self.tau * np.dot(self.Theta_TK[t-1], self.Pi_KK[:, k])
-                scale = 1. / (self.tau + self.zeta_T[t] + self.delta_T[t])
+        for t in range(self.T):
+            scale = 1. / (tau + self.zeta_T[t] + self.delta_T[t])
+
+            np.random.shuffle(indices)
+            for k in indices:
+                if t == 0:
+                    shape = tau * self.nu_K[k]
+                else:
+                    shape = tau * np.dot(self.Theta_TK[t-1], self.Pi_KK[:, k])
+                shape += self.L_TK[t, k] + self.Y_TK[t, k]
                 self.Theta_TK[t, k] = _sample_gamma(self.rng, shape, scale)
 
     cdef void _update_Phi_KV(self):
@@ -323,14 +323,14 @@ cdef class PGDS(MCMCModel):
             double shape, scale
 
         if self.stationary == 0:
-            for t in range(1, self.T):
+            for t in range(self.T):
                 shape = self.eps + self.Y_T[t]
                 scale = 1. / (self.eps + np.sum(self.Theta_TK[t, :]))
                 self.delta_T[t] = _sample_gamma(self.rng, shape, scale)
         else:
             shape = self.eps + np.sum(self.Y_T)
-            scale = 1. / (self.eps + np.sum(self.Theta_TK[1:]))
-            self.delta_T[1:] = _sample_gamma(self.rng, shape, scale)
+            scale = 1. / (self.eps + np.sum(self.Theta_TK[:]))
+            self.delta_T[:] = _sample_gamma(self.rng, shape, scale)
 
     cdef void _update_Pi_KK(self):
         cdef:
@@ -360,29 +360,30 @@ cdef class PGDS(MCMCModel):
             double xi_k, nu_k, a_k, nu, w_k, shape, rate, eps
             list indices
 
-        assert self.shrink == 1
-        eps = self.eps
+        # assert self.shrink == 1
+        # eps = self.eps
 
-        nu = np.sum(self.nu_K)
-        indices = range(self.K)
-        np.random.shuffle(indices)
-        for k in indices:
-            xi_k = self.xi_K[k]
-            nu_k = self.nu_K[k]
-            a_k = nu_k * (xi_k + nu - nu_k)
-            l_k = np.sum(self.L_KK[k])
+        # nu = np.sum(self.nu_K)
+        # indices = range(self.K)
+        # np.random.shuffle(indices)
+        # for k in indices:
+        #     xi_k = self.xi_K[k]
+        #     nu_k = self.nu_K[k]
+        #     a_k = nu_k * (xi_k + nu - nu_k)
+        #     l_k = np.sum(self.L_KK[k])
 
-            shape = rate = eps
-            if l_k > 0:
-                h_kk = _sample_crt(self.rng, self.L_KK[k, k], nu_k * xi_k)
-                assert h_kk >= 0
-                shape += h_kk
+        #     shape = rate = eps
+        #     if l_k > 0:
+        #         h_kk = _sample_crt(self.rng, self.L_KK[k, k], nu_k * xi_k)
+        #         assert h_kk >= 0
+        #         shape += h_kk
 
-                w_k = _sample_beta(self.rng, a_k, l_k)
-                assert w_k > 0
-                rate -= nu_k * log(w_k)
-            self.xi_K[k] = _sample_gamma(self.rng, shape, 1. / rate)
-            self.shp_KK[k, k] = nu_k * self.xi_K[k]
+        #         w_k = _sample_beta(self.rng, a_k, l_k)
+        #         assert w_k > 0
+        #         rate -= nu_k * log(w_k)
+        #     self.xi_K[k] = _sample_gamma(self.rng, shape, 1. / rate)
+        #     self.shp_KK[k, k] = nu_k * self.xi_K[k]
+        pass
 
     # cdef void _update_xi_K(self):
     #     cdef:
@@ -455,22 +456,52 @@ cdef class PGDS(MCMCModel):
 
     cdef void _update_nu_K(self):
         cdef:
-            int k, l_k, m_k
-            double tau, gam_k, zeta
+            int k, l_k, m_k, k2
+            double tau, gam_k, zeta, r_kk2, nu, nu_k, c_k, tmp, shape, rate, lnq_k
+            list indices
 
         self._update_zeta_T()
 
         tau = self.tau
         gam_k = self.gam / self.K
         zeta = tau * log1p((self.delta_T[0] + self.zeta_T[0]) / tau)
+        
+        indices = range(self.K)
+        np.random.shuffle(indices)
+        for k in indices:
+            nu_k = self.nu_K[k]
+            m_k = self.Y_TK[0, k] + self.L_TK[0, k]
+            l_k = _sample_crt(self.rng, m_k, tau * nu_k)
+            shape = gam_k + l_k
+            rate = self.beta + zeta
+            if self.shrink == 1:
+                r_kk2 = self.nu_K[k] * self.xi_K[k]
+                h_k = _sample_crt(self.rng, self.L_KK[k, k], r_kk2)
 
-        if self.shrink == 0:
-            for k in range(self.K):
-                m_k = self.Y_TK[0, k] + self.L_TK[0, k]
-                l_k = _sample_crt(self.rng, m_k, tau * self.nu_K[k])
-                self.nu_K[k] = _sample_gamma(self.rng,
-                                             gam_k + l_k,
-                                             1. / (self.beta + zeta))
+                nu = np.sum(self.nu_K)
+                tmp = (self.xi_K[k] + nu - nu_k)
+                lnq_k = -log(_sample_beta(self.rng, nu_k * tmp,
+                                          np.sum(self.L_KK[k])))
+                # self.xi_K[k] = _sample_gamma(self.rng, self.eps + h_k,
+                                             # 1. / (self.eps + nu_k * lnq_k))
+                c_k = tmp * lnq_k
+                for k2 in range(self.K):
+                    if k2 == k:
+                        continue
+                    nu_k2 = self.nu_K[k2]
+                    r_kk2 = nu_k * nu_k2
+                    h_k += _sample_crt(self.rng, self.L_KK[k, k2], r_kk2)
+                    h_k += _sample_crt(self.rng, self.L_KK[k2, k], r_kk2)
+
+                    tmp = (self.xi_K[k2] + nu - nu_k2)
+                    c_k -= nu_k2 * log(_sample_beta(self.rng,
+                                                    nu_k2 * tmp,
+                                                    np.sum(self.L_KK[k2])))
+                shape += h_k
+                rate += c_k
+            assert np.isfinite(shape) and np.isfinite(rate)
+            self.nu_K[k] = _sample_gamma(self.rng, shape, 1. / rate)
+
 
     cdef void _update_beta(self):
         cdef: 
