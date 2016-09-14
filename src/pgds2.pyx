@@ -108,7 +108,8 @@ cdef class PGDS(MCMCModel):
                      ('beta', self.beta, self._update_beta)]
 
         if self.shrink == 1:
-            variables += [('xi_K', self.xi_K, self._update_xi_K)]
+            # variables += [('xi_K', self.xi_K, self._update_xi_K)]
+            variables += [('xi_K', self.xi_K, lambda x: None)]
 
         return variables
 
@@ -353,107 +354,6 @@ cdef class PGDS(MCMCModel):
             _sample_dirichlet(self.rng, self.shp_KK[k], self.Pi_KK[k])
             assert np.isfinite(self.Pi_KK[k]).all()
 
-
-    cdef void _update_xi_K(self):
-        cdef:
-            int h_kk, k, l_k
-            double xi_k, nu_k, a_k, nu, w_k, shape, rate, eps
-            list indices
-
-        # assert self.shrink == 1
-        # eps = self.eps
-
-        # nu = np.sum(self.nu_K)
-        # indices = range(self.K)
-        # np.random.shuffle(indices)
-        # for k in indices:
-        #     xi_k = self.xi_K[k]
-        #     nu_k = self.nu_K[k]
-        #     a_k = nu_k * (xi_k + nu - nu_k)
-        #     l_k = np.sum(self.L_KK[k])
-
-        #     shape = rate = eps
-        #     if l_k > 0:
-        #         h_kk = _sample_crt(self.rng, self.L_KK[k, k], nu_k * xi_k)
-        #         assert h_kk >= 0
-        #         shape += h_kk
-
-        #         w_k = _sample_beta(self.rng, a_k, l_k)
-        #         assert w_k > 0
-        #         rate -= nu_k * log(w_k)
-        #     self.xi_K[k] = _sample_gamma(self.rng, shape, 1. / rate)
-        #     self.shp_KK[k, k] = nu_k * self.xi_K[k]
-        pass
-
-    # cdef void _update_xi_K(self):
-    #     cdef:
-    #         int h_kk, k, l_k
-    #         double xi_k, nu_k, a_k, nu, w_k, shape, rate, eps
-    #         double acc, prop, p_curr, p_prop, q_curr, q_prop
-    #         list indices
-
-    #     assert self.shrink == 1
-    #     eps = self.eps
-
-    #     nu = np.sum(self.nu_K)
-
-    #     indices = range(self.K)
-    #     np.random.shuffle(indices)
-    #     for k in indices:  # TODO: Randomize the order
-    #         xi_k = self.xi_K[k]
-    #         nu_k = self.nu_K[k]
-
-    #         self.shp_KK[k, k] = nu_k * xi_k
-    #         for k2 in range(self.K):
-    #             if k == k2:
-    #                 continue
-    #             self.shp_KK[k, k2] = nu_k * self.nu_K[k2]
-
-    #         a_k = nu_k * (xi_k + nu - nu_k)
-    #         l_k = np.sum(self.L_KK[k])
-
-    #         shape = rate = eps
-    #         q_curr = p_curr = (shape - 1) * log(xi_k) - rate * xi_k 
-    #         p_curr += (nu_k * xi_k - 1) * log(self.Pi_KK[k, k]) + \
-    #                   lgamma(a_k) - lgamma(nu_k * xi_k)
-
-    #         # q_curr = log(gsl_ran_gamma_pdf(xi_k, eps, 1./eps))
-    #         # p_curr = q_curr + gsl_ran_dirichlet_lnpdf(self.K,
-    #         #                                           &self.shp_KK[k, 0],
-    #         #                                           &self.Pi_KK[k, 0])
-    #         while 1:
-    #             if l_k > 0:
-    #                 h_kk = _sample_crt(self.rng, self.L_KK[k, k], nu_k * xi_k)
-    #                 assert h_kk >= 0
-    #                 shape = eps + h_kk
-
-    #                 w_k = _sample_beta(self.rng, a_k, l_k)
-    #                 assert w_k > 0
-    #                 rate = eps - nu_k * log(w_k)
-    #                 q_curr = (shape - 1) * log(xi_k) - rate * xi_k
-    #                 # q_curr = log(gsl_ran_gamma_pdf(xi_k, shape, 1./rate))
-    #             prop = _sample_gamma(self.rng, shape, 1. / rate)
-                
-    #             q_prop = (shape - 1) * log(prop) - rate * prop
-    #             # q_prop = log(gsl_ran_gamma_pdf(prop, shape, 1. / rate))
-                
-    #             self.shp_KK[k, k] = nu_k * prop
-
-    #             p_prop = (eps - 1) * log(prop) - eps * prop + \
-    #                      (nu_k * prop - 1) * log(self.Pi_KK[k, k]) + \
-    #                      lgamma( nu_k * (prop + nu - nu_k)) - lgamma(nu_k * prop)
-
-    #             # p_prop = log(gsl_ran_gamma_pdf(prop, eps, 1./eps))
-    #             # p_prop += gsl_ran_dirichlet_lnpdf(self.K,
-    #             #                                   &self.shp_KK[k, 0],
-    #             #                                   &self.Pi_KK[k, 0])
-
-    #             acc = p_prop - p_curr + q_curr - q_prop
-    #             if log(gsl_rng_uniform(self.rng)) < acc:
-    #                 break
-    #         self.xi_K[k] = prop
-    #         self.shp_KK[k, k] = nu_k * prop
-
     cdef void _update_nu_K(self):
         cdef:
             int k, l_k, m_k, k2
@@ -482,8 +382,8 @@ cdef class PGDS(MCMCModel):
                 tmp = (self.xi_K[k] + nu - nu_k)
                 lnq_k = -log(_sample_beta(self.rng, nu_k * tmp,
                                           np.sum(self.L_KK[k])))
-                # self.xi_K[k] = _sample_gamma(self.rng, self.eps + h_k,
-                                             # 1. / (self.eps + nu_k * lnq_k))
+                self.xi_K[k] = _sample_gamma(self.rng, self.eps + h_k,
+                                             1. / (self.eps + nu_k * lnq_k))
                 c_k = tmp * lnq_k
                 for k2 in range(self.K):
                     if k2 == k:
