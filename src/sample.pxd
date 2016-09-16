@@ -23,6 +23,11 @@ cdef extern from "gsl/gsl_randist.h" nogil:
     unsigned int gsl_ran_poisson(gsl_rng * r, double mu)
     double gsl_ran_gamma(gsl_rng * r, double a, double b)
     unsigned int gsl_ran_logarithmic (const gsl_rng * r, double p)
+    void gsl_ran_multinomial(gsl_rng * r,
+                             size_t K,
+                             unsigned int N,
+                             const double p[],
+                             unsigned int n[])
 
 DEF MIN_GAMMA_SHAPE = 1e-5
 DEF MIN_GAMMA_SCALE = 1e-5
@@ -305,6 +310,17 @@ cdef inline int _sample_truncated_poisson(gsl_rng * rng, double mu) nogil:
             if x < 1. / u:
                 return x
 
+
+cdef inline int _sample_multinomial(gsl_rng * rng,
+                                    unsigned int N,
+                                    double[::1] p,
+                                    unsigned int[::1] out) nogil:
+    cdef:
+        size_t K
+
+    K = p.shape[0]
+    gsl_ran_multinomial(rng, K, N, &p[0], &out[0])
+
 cdef class Sampler:
     """
     Wrapper for a gsl_rng object that exposes all sampling methods to Python.
@@ -323,4 +339,5 @@ cdef class Sampler:
     cpdef int sumcrt(self, int[::1] M, double[::1] R)
     cpdef int sumlog(self, int n, double p)
     cpdef int truncated_poisson(self, double mu)
-
+    cpdef void multinomial(self, unsigned int N, double[::1] p, unsigned int[::1] out)
+    cpdef int bessel(self, double v, double a)

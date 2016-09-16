@@ -12,6 +12,7 @@ import sys
 import numpy as np
 cimport numpy as np
 from numpy.random import randint
+from bessel.bessel cimport _sample as _sample_bessel
 
 
 cdef class Sampler:
@@ -61,3 +62,9 @@ cdef class Sampler:
 
     cpdef int truncated_poisson(self, double mu):
         return _sample_truncated_poisson(self.rng, mu)
+
+    cpdef void multinomial(self, unsigned int N, double[::1] p, unsigned int[::1] out):
+        _sample_multinomial(self.rng, N, p, out)
+
+    cpdef int bessel(self, double v, double a):
+        return _sample_bessel(self.rng, v, a)

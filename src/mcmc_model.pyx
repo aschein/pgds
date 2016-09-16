@@ -14,7 +14,7 @@ cimport numpy as np
 import scipy.stats as st
 from numpy.random import randint
 from pp_plot import pp_plot
-
+from copy import deepcopy
 
 cdef class MCMCModel:
 
@@ -50,7 +50,7 @@ cdef class MCMCModel:
 
         Returns only the names and values of variables (not update funcs).
         """
-        for (k, v, update_func) in self._get_variables():
+        for k, v, update_func in self._get_variables():
             if np.isscalar(v):
                 yield k, v
             else:
@@ -84,7 +84,7 @@ cdef class MCMCModel:
 
         pass
 
-    cdef void _update(self, int num_itns, int verbose, dict schedule):
+    cdef void _update(self, int num_itns, int verbose, dict burnin):
         """
         Perform inference.
         """
@@ -94,104 +94,134 @@ cdef class MCMCModel:
 
         for n in range(num_itns):
             for k, _, update_func in self._get_variables():
-                if k not in schedule.keys() or n >= schedule[k]:
+                if k not in burnin.keys() or n >= burnin[k]:
                     update_func(self)
             if verbose != 0:
                 print n
                 if (n + 1) % 1 == 0:
                     self._print_state()
 
-    cpdef void update(self, int num_itns, int verbose, dict schedule={}):
+    cpdef void update(self, int num_itns, int verbose, dict burnin={}):
         """
         Thin wrapper around _update(...).
         """
-        self._update(num_itns, verbose, schedule)
+        self._update(num_itns, verbose, burnin)
 
     cdef void _test(self,
                     int num_samples,
                     str method='geweke',
-                    dict schedule={}):
+                    dict var_funcs={},
+                    dict burnin={}):
         """
         Perform Geweke testing or Schein testing.
         """
 
         cdef:
             int n
-            dict funcs, fwd, rev
+            dict default_funcs, fwd, rev
 
-        funcs = {
-            'Arith. Mean': np.mean,
-            # 'Geom. Mean': lambda x: np.exp(np.log1p(x).mean()),
-            'Entropy mean': lambda x: np.mean(st.entropy(x)),
-            'Var.': np.var,
-            'Max.': np.max
-        }
+        default_funcs = {'Arith. Mean': np.mean,
+                         'Geom. Mean': lambda x: np.exp(np.mean(np.log1p(x))),
+                         'Var.': np.var,
+                         'Max.': np.max}
 
         fwd, rev = {}, {}
+        var_funcs = deepcopy(var_funcs)  # this method changes var_funcs state
         for k, v, _ in self._get_variables():
+            
+            if k not in burnin.keys():
+                burnin[k] = 0
+            
+            if burnin[k] > num_samples:
+                if k in var_funcs.keys():
+                    del var_funcs[k]
+                continue
+
+            if k not in var_funcs.keys():
+                var_funcs[k] = default_funcs
+            assert len(var_funcs[k].keys()) <= 4
+
             if np.isscalar(v):
                 fwd[k] = np.empty(num_samples)
                 rev[k] = np.empty(num_samples)
             else:
                 fwd[k] = {}
                 rev[k] = {}
-                for f in funcs:
+                for f in var_funcs[k]:
                     fwd[k][f] = np.empty(num_samples)
                     rev[k][f] = np.empty(num_samples)
 
         if method == 'schein':
+            self._init_state()
             for n in range(num_samples):
                 self._generate_state()
                 self._generate_data()
-                self._calc_funcs(funcs, n, fwd)
+                self._calc_funcs(n, var_funcs, fwd)
 
-                self._update(5, 0, schedule)
+                self._update(5, 0, burnin)
                 self._generate_data()
-                self._calc_funcs(funcs, n, rev)
+                self._calc_funcs(n, var_funcs, rev)
 
                 if n % 500 == 0:
                     print n
         else:
+            self._init_state()
             for n in range(num_samples):
                 self._generate_state()
                 self._generate_data()
-                self._calc_funcs(funcs, n, fwd)
+                self._calc_funcs(n, var_funcs, fwd)
                 if n % 500 == 0:
                     print n
 
             self._generate_state()
             for n in range(num_samples):
                 self._generate_data()
-                self._update(1, 0, schedule)
-                self._calc_funcs(funcs, n, rev)
+                self._update(10, 0, burnin)
+                self._calc_funcs(n, var_funcs, rev)
                 if n % 500 == 0:
                     print n
 
         for k, _, _ in self._get_variables():
-            if not np.isinf(schedule[k]):
+            if not burnin[k] > num_samples:
                 pp_plot(fwd[k], rev[k], k)
 
-    cdef void _calc_funcs(self, dict funcs, int n, dict out):
+    cdef void _calc_funcs(self,
+                          int n,
+                          dict var_funcs,
+                          dict out):
         """
         Helper function for _test. Calculates and stores functions of variables.
         """
 
         for k, v, _ in self._get_variables():
+            if k not in var_funcs.keys():
+                continue
             if np.isscalar(v):
                 out[k][n] = v
             else:
-                for f, func in funcs.iteritems():
+                for f, func in var_funcs[k].iteritems():
                     out[k][f][n] = func(v)
 
-    cpdef void geweke(self, int num_samples):
+    cpdef void geweke(self,
+                      int num_samples,
+                      dict var_funcs={},
+                      dict burnin={}):
         """
         Wrapper around _test(...).
         """
+        self._test(num_samples=num_samples,
+                   method='geweke',
+                   var_funcs=var_funcs,
+                   burnin=burnin)
 
-        self._test(num_samples, 'geweke')
-
-    cpdef void schein(self, int num_samples, dict schedule={}):
+    cpdef void schein(self,
+                      int num_samples,
+                      dict var_funcs={},
+                      dict burnin={}):
         """
         Wrapper around _test(...).
         """
-        self._test(num_samples, 'schein', schedule)
+        self._test(num_samples=num_samples,
+                   method='schein',
+                   var_funcs=var_funcs,
+                   burnin=burnin)

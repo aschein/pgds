@@ -16,7 +16,7 @@ import scipy.stats as st
 
 from libc.math cimport sqrt, exp, log, log1p, lgamma
 from mcmc_model cimport MCMCModel
-from sample cimport _sample_gamma, _sample_dirichlet, _sample_beta, _sample_crt, _sample_sumlog
+from sample cimport _sample_gamma, _sample_dirichlet, _sample_beta, _sample_crt
 from lambertw cimport _simulate_zeta
 from pp_plot import pp_plot
 
@@ -102,16 +102,31 @@ cdef class PGDS(MCMCModel):
                      ('L_TKK', self.L_TKK, self._update_L_TKK),
                      ('Theta_TK', self.Theta_TK, self._update_Theta_TK),
                      ('Pi_KK', self.Pi_KK, self._update_Pi_KK),
-                     ('delta_T', self.delta_T, self._update_delta_T),
                      ('Phi_KV', self.Phi_KV, self._update_Phi_KV),
                      ('nu_K', self.nu_K, self._update_nu_K),
                      ('beta', self.beta, self._update_beta)]
 
+        if self.stationary == 0:
+            variables += [('delta_T', self.delta_T, self._update_delta_T)]
+        else:
+            variables += [('delta_T', self.delta_T[0], self._update_delta_T)]
+
         if self.shrink == 1:
+            variables += [('xi_K', self.xi_K[0], self._update_xi_K)]
             # variables += [('xi_K', self.xi_K, self._update_xi_K)]
-            variables += [('xi_K', self.xi_K, lambda x: None)]
 
         return variables
+
+    cdef void _init_state(self):
+        cdef:
+            double tmp
+
+        tmp = self.eps
+        
+        self.eps = 10.
+        self._generate_state()
+        
+        self.eps = tmp
 
     cdef void _generate_state(self):
         """
@@ -128,23 +143,25 @@ cdef class PGDS(MCMCModel):
         rng = self.rng
 
         self.beta = _sample_gamma(rng, eps, 1. / eps)
+
         for k in range(K):
             self.nu_K[k] = _sample_gamma(rng, self.gam / K, 1. / self.beta)
             assert np.isfinite(self.nu_K[k])
-        
-        self.shp_KK[:] = self.eps
+
         if self.shrink == 1:
-            for k in range(K):
-                self.xi_K[k] = _sample_gamma(rng, eps, 1. / eps)
-                assert np.isfinite(self.xi_K[k])      
-                
+            self.xi_K[:] = _sample_gamma(rng, eps, 1. / eps)
+            # for k in range(K):
+            #     self.xi_K[k] = _sample_gamma(rng, eps, 1. / eps)
+            assert np.isfinite(self.xi_K).all()  
+        
+        for k in range(K):
+            self.shp_KK[k, :] = self.eps
+            if self.shrink == 1:
                 self.shp_KK[k, k] = self.nu_K[k] * self.xi_K[k]
                 for k2 in range(K):
                     if k == k2:
                         continue
                     self.shp_KK[k, k2] = self.nu_K[k] * self.nu_K[k2]
-
-        for k in range(K):
             _sample_dirichlet(rng, self.shp_KK[k], self.Pi_KK[k])
             assert np.isfinite(self.Pi_KK[k]).all()
             assert self.Pi_KK[k, 0] >= 0
@@ -200,6 +217,7 @@ cdef class PGDS(MCMCModel):
                         if y_tvk > 0:
                             self.Y_KV[k, v] += y_tvk
                             self.Y_TV[t, v] += y_tvk
+        self._update_L_TKK()
 
     cdef void _update_zeta_T(self):
         cdef:
@@ -279,11 +297,13 @@ cdef class PGDS(MCMCModel):
                                         l_tk,
                                         &self.P_K[0],
                                         &self.N_K[0])
+
                     for k1 in range(self.K):
                         l_tkk = self.N_K[k1]
-                        self.L_KK[k1, k] += l_tkk
-                        self.L_TK[t, k1] += l_tkk
-                        self.L_TKK[t, k1, k] = l_tkk
+                        if l_tkk > 0:
+                            self.L_KK[k1, k] += l_tkk
+                            self.L_TK[t, k1] += l_tkk
+                            self.L_TKK[t, k1, k] = l_tkk
 
     cdef void _update_Theta_TK(self):
         cdef:
@@ -354,10 +374,30 @@ cdef class PGDS(MCMCModel):
             _sample_dirichlet(self.rng, self.shp_KK[k], self.Pi_KK[k])
             assert np.isfinite(self.Pi_KK[k]).all()
 
+    cdef void _update_xi_K(self):
+
+        cdef:
+            int h
+            double eps, nu, c, nu_k, xi_k, lnq_k, tmp
+
+        eps = self.eps
+        nu = np.sum(self.nu_K)
+
+        h = c = 0
+        for k in range(self.K):
+            nu_k = self.nu_K[k]
+            xi_k = self.xi_K[k]
+            h += _sample_crt(self.rng, self.L_KK[k, k], nu_k * xi_k)
+
+            tmp = (xi_k + nu - nu_k)
+            lnq_k = log(_sample_beta(self.rng, nu_k * tmp, np.sum(self.L_KK[k])))
+            c -= nu_k * lnq_k
+        self.xi_K[:] = _sample_gamma(self.rng, eps + h, 1. / (eps + c))
+
     cdef void _update_nu_K(self):
         cdef:
-            int k, l_k, m_k, k2
-            double tau, gam_k, zeta, r_kk2, nu, nu_k, c_k, tmp, shape, rate, lnq_k
+            int k, l_k, m_k, k2, h_k, h
+            double tau, gam_k, zeta, r_kk2, nu, nu_k, c_k, tmp, shape, rate, lnq_k, c
             list indices
 
         self._update_zeta_T()
@@ -382,8 +422,6 @@ cdef class PGDS(MCMCModel):
                 tmp = (self.xi_K[k] + nu - nu_k)
                 lnq_k = -log(_sample_beta(self.rng, nu_k * tmp,
                                           np.sum(self.L_KK[k])))
-                self.xi_K[k] = _sample_gamma(self.rng, self.eps + h_k,
-                                             1. / (self.eps + nu_k * lnq_k))
                 c_k = tmp * lnq_k
                 for k2 in range(self.K):
                     if k2 == k:

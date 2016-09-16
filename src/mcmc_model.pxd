@@ -28,9 +28,13 @@ cdef class MCMCModel:
     cdef void _generate_data(self)
     cdef void _init_state(self)
     cdef void _print_state(self)
-    cdef void _update(self, int num_itns, int verbose, dict schedule)
-    cpdef void update(self, int num_itns, int verbose, dict schedule=?)
-    cdef void _test(self, int num_samples, str method=?, dict schedule=?)
-    cdef void _calc_funcs(self, dict funcs, int n, dict out)
-    cpdef void geweke(self, int num_samples)
-    cpdef void schein(self, int num_samples, dict schedule=?)
+    cdef void _update(self, int num_itns, int verbose, dict burnin)
+    cpdef void update(self, int num_itns, int verbose, dict burnin=?)
+    cdef void _test(self,
+                    int num_samples,
+                    str method=?,
+                    dict var_funcs=?,
+                    dict burnin=?)
+    cdef void _calc_funcs(self, int n, dict var_funcs, dict out)
+    cpdef void geweke(self, int num_samples, dict var_funcs=?, dict burnin=?)
+    cpdef void schein(self, int num_samples, dict var_funcs=?, dict burnin=?)
