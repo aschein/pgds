@@ -68,3 +68,19 @@ cdef class Sampler:
 
     cpdef int bessel(self, double v, double a):
         return _sample_bessel(self.rng, v, a)
+
+    # cpdef void allocate_with_cdf(self,
+    #                          int[:,::1] N_IJ,
+    #                          double[:,::1] Theta_IK,
+    #                          double[:,::1] Phi_KJ,
+    #                          int[:,::1] N_IK,
+    #                          int[:,::1] N_KJ):
+    #     _allocate_and_count(self.rng, N_IJ, Theta_IK, Phi_KJ, N_IK, N_KJ, 0)
+            
+    # cpdef void allocate_with_mult(self,
+    #                               int[:,::1] N_IJ,
+    #                               double[:,::1] Theta_IK,
+    #                               double[:,::1] Phi_KJ,
+    #                               int[:,::1] N_IK,
+    #                               int[:,::1] N_KJ):
+    #     _allocate_and_count(self.rng, N_IJ, Theta_IK, Phi_KJ, N_IK, N_KJ, 1)

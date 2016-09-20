@@ -8,6 +8,8 @@
 #distutils: extra_link_args = ['-lgsl', '-lgslcblas']
 #distutils: extra_compile_args = -Wno-unused-function -Wno-unneeded-internal-declaration
 
+cimport numpy as np
+
 cdef extern from "gsl/gsl_rng.h" nogil:
     ctypedef struct gsl_rng_type:
         pass
@@ -215,20 +217,22 @@ cdef inline int _sample_crt(gsl_rng * rng, int m, double r) nogil:
     if m < 0 or r < 0:
         return -1
 
-    elif m == 0 or r == 0:
+    if m == 0:
         return 0
 
-    elif m == 1:
+    if m == 1:
         return 1
 
-    else:
-        l = 0
-        for n in range(m):
-            p = r / (r + n)
-            u = gsl_rng_uniform(rng)
-            if p > u:
-                l += 1
-        return l
+    if r <= 1e-50:
+        return 1
+
+    l = 0
+    for n in range(m):
+        p = r / (r + n)
+        u = gsl_rng_uniform(rng)
+        if p > u:
+            l += 1
+    return l
 
 cdef inline int _sample_sumcrt(gsl_rng * rng, int[::1] M, double[::1] R) nogil:
     """
@@ -254,7 +258,6 @@ cdef inline int _sample_sumcrt(gsl_rng * rng, int[::1] M, double[::1] R) nogil:
         else:
             l += lk
 
-
 cdef inline int _sample_sumlog(gsl_rng * rng, int n, double p) nogil:
     """
     Sample a SumLog random variable defined as the sum of n iid Logarithmic rvs:
@@ -279,7 +282,6 @@ cdef inline int _sample_sumlog(gsl_rng * rng, int n, double p) nogil:
     for i in range(n):
         out += gsl_ran_logarithmic(rng, p)
     return out
-
 
 
 cdef inline int _sample_truncated_poisson(gsl_rng * rng, double mu) nogil:
@@ -311,7 +313,7 @@ cdef inline int _sample_truncated_poisson(gsl_rng * rng, double mu) nogil:
                 return x
 
 
-cdef inline int _sample_multinomial(gsl_rng * rng,
+cdef inline void _sample_multinomial(gsl_rng * rng,
                                     unsigned int N,
                                     double[::1] p,
                                     unsigned int[::1] out) nogil:
@@ -320,6 +322,67 @@ cdef inline int _sample_multinomial(gsl_rng * rng,
 
     K = p.shape[0]
     gsl_ran_multinomial(rng, K, N, &p[0], &out[0])
+
+
+# cdef inline void _allocate_and_count(gsl_rng * rng,
+#                                      int[:,::1] N_IJ,
+#                                      double[:,::1] Theta_IK,
+#                                      double[:,::1] Phi_KJ,
+#                                      int[:,::1] N_IK,
+#                                      int[:,::1] N_KJ,
+#                                      int mode):
+#     cdef: 
+#         size_t I, J, K
+#         int i, j, k
+#         unsigned int n_ij, n_ijk
+#         double norm
+#         double[::1] P_K
+#         unsigned int[::1] N_K
+
+#     I, J = N_IJ.shape[0], N_IJ.shape[1]
+#     K = Phi_KJ.shape[0]
+
+#     P_K = np.zeros(K)
+#     N_K = np.zeros(K, dtype=np.uint32)
+
+#     N_IK[:] = 0
+#     N_KJ[:] = 0
+
+#     with nogil:
+#         for i in range(I):
+#             for j in range(J):
+#                 n_ij = N_IJ[i, j]
+#                 if n_ij == 0:
+#                     continue
+
+#                 if mode == 0:  # cdf + searchsorted method (unnormalized)
+#                     P_K[0] = Theta_IK[i, 0] * Phi_KJ[0, j]
+#                     for k in range(1, K):
+#                         P_K[k] = P_K[k-1] + Theta_IK[i, k] * Phi_KJ[k, j]
+                    
+#                     norm = P_K[K-1]
+#                     for _ in range(n_ij):
+#                         k = _searchsorted(norm * gsl_rng_uniform(rng), P_K)
+#                         N_IK[i, k] += 1
+#                         N_KJ[k, j] += 1
+
+#                 else:  # conditional binomial method (via gsl_ran_multinomial)
+#                     norm = 0
+#                     for k in range(K):
+#                         P_K[k] = Theta_IK[i, k] * Phi_KJ[k, j]
+#                         norm += P_K[k]
+
+#                     for k in range(K):
+#                         P_K[k] /= norm
+
+#                     gsl_ran_multinomial(rng, K, n_ij, &P_K[0], &N_K[0])
+
+#                     for k in range(K):
+#                         n_ijk = N_K[k]
+#                         if n_ijk > 0:
+#                             N_IK[i, k] += n_ijk
+#                             N_KJ[k, j] += n_ijk
+    
 
 cdef class Sampler:
     """
@@ -341,3 +404,15 @@ cdef class Sampler:
     cpdef int truncated_poisson(self, double mu)
     cpdef void multinomial(self, unsigned int N, double[::1] p, unsigned int[::1] out)
     cpdef int bessel(self, double v, double a)
+    # cpdef void allocate_with_cdf(self,
+    #                              int[:,::1] N_IJ,
+    #                              double[:,::1] Theta_IK,
+    #                              double[:,::1] Phi_KJ,
+    #                              int[:,::1] N_IK,
+    #                              int[:,::1] N_KJ)
+    # cpdef void allocate_with_mult(self,
+    #                               int[:,::1] N_IJ,
+    #                               double[:,::1] Theta_IK,
+    #                               double[:,::1] Phi_KJ,
+    #                               int[:,::1] N_IK,
+    #                               int[:,::1] N_KJ)

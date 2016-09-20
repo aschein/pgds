@@ -158,7 +158,7 @@ cdef class MCMCModel:
                 self._generate_data()
                 self._calc_funcs(n, var_funcs, fwd)
 
-                self._update(5, 0, burnin)
+                self._update(10, 0, burnin)
                 self._generate_data()
                 self._calc_funcs(n, var_funcs, rev)
 
