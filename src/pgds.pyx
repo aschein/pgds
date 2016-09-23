@@ -15,7 +15,8 @@ from time import time
 from libc.math cimport log, log1p
 
 from fatwalrus.mcmc_model cimport MCMCModel
-from fatwalrus.sample cimport _sample_gamma, _sample_dirichlet, _sample_lnbeta, _sample_crt, _searchsorted
+from fatwalrus.sample cimport _sample_gamma, _sample_dirichlet, _sample_lnbeta
+from fatwalrus.sample cimport _sample_crt, _searchsorted
 from lambertw cimport _simulate_zeta
 
 cdef extern from "gsl/gsl_rng.h" nogil:
@@ -228,6 +229,9 @@ cdef class PGDS(MCMCModel):
             for t in range(self.T-2,-1,-1):
                 tmp = (self.zeta_T[t+1] + self.delta_T[t+1]) / self.tau
                 self.zeta_T[t] = self.tau * log1p(tmp)
+
+    cdef void _update_missing_data(self):
+        
 
     cdef void _update_Y_TVK(self):
         cdef:
