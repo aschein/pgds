@@ -37,10 +37,10 @@ cdef class PGDS(MCMCModel):
     cdef:
         int T, V, K, shrink, stationary, steady
         double tau, gam, beta, eps, start_time
-        double[::1] nu_K, xi_K, delta_T, zeta_T, P_K, Q_K
+        double[::1] nu_K, xi_K, delta_T, zeta_T, P_K, lnq_K
         double[:,::1] Pi_KK, Theta_TK, shp_KK, Phi_KV
         int[::1] Y_T
-        int[:,::1] Y_TV, Y_TK, Y_KV, L_TK, L_KK
+        int[:,::1] Y_TV, Y_TK, Y_KV, L_TK, L_KK, H_KK
         int[:,:,::1] L_TKK
         unsigned int[::1] N_K, N_V
 
@@ -79,7 +79,7 @@ cdef class PGDS(MCMCModel):
         self.Y_KV = np.zeros((K, V), dtype=np.int32)
         self.Y_T = np.zeros(T, dtype=np.int32)
         self.P_K = np.zeros(K)
-        self.Q_K = np.zeros(K)
+        self.lnq_K = np.zeros(K)
         self.N_K = np.zeros(K, dtype=np.uint32)
         self.N_V = np.zeros(V, dtype=np.uint32)
 
@@ -96,18 +96,22 @@ cdef class PGDS(MCMCModel):
                      ('L_TKK', self.L_TKK, self._update_L_TKK),
                      ('Theta_TK', self.Theta_TK, self._update_Theta_TK),
                      ('Pi_KK', self.Pi_KK, self._update_Pi_KK),
-                     ('Phi_KV', self.Phi_KV, self._update_Phi_KV),
-                     ('nu_K', self.nu_K, self._update_nu_K),
-                     ('beta', self.beta, self._update_beta)]
+                     ('Phi_KV', self.Phi_KV, self._update_Phi_KV)]
 
         if self.stationary == 0:
             variables += [('delta_T', self.delta_T, self._update_delta_T)]
         else:
             variables += [('delta_T', self.delta_T[0], self._update_delta_T)]
 
-        if self.shrink == 1:
-            variables += [('xi_K', self.xi_K[0], self._update_xi_K)]
-
+        if self.shrink == 0:
+            variables += [('beta', self.beta, self._update_beta),
+                          ('nu_K', self.nu_K, self._update_nu_K)]
+        else:
+            variables += [('beta', self.beta, self._update_beta),
+                          ('H_KK', self.H_KK, self._update_H_KK_and_lnq_K),
+                          ('lnq_K', self.lnq_K, lambda x: None),
+                          ('nu_K', self.nu_K, self._update_nu_K),
+                          ('xi_K', self.xi_K[0], self._update_xi_K)]
         return variables
 
     cdef void _init_state(self):
@@ -208,7 +212,9 @@ cdef class PGDS(MCMCModel):
                         if y_tvk > 0:
                             self.Y_KV[k, v] += y_tvk
                             self.Y_TV[t, v] += y_tvk
+        
         self._update_L_TKK()
+        self._update_H_KK_and_lnq_K()
 
     cdef void _update_zeta_T(self):
         cdef:
@@ -226,7 +232,7 @@ cdef class PGDS(MCMCModel):
     cdef void _update_Y_TVK(self):
         cdef:
             int t, v, k, _
-            double norm
+            double norm, u
             unsigned int y_tv, y_tkv
 
         self.Y_TK[:] = 0
@@ -239,18 +245,20 @@ cdef class PGDS(MCMCModel):
                 if y_tv == 0:
                     continue
 
-                if (y_tv < self.K) and (self.K < 40):  # use CDF/searchsorted method
+                if (y_tv < self.K) and (self.K < 40): # use CDF/searchsorted
                     self.P_K[0] = self.Theta_TK[t, 0] * self.Phi_KV[0, v]
                     for k in range(1, self.K):
-                        self.P_K[k] = self.P_K[k-1] + self.Theta_TK[t, k] * self.Phi_KV[k, v]
+                        self.P_K[k] = self.P_K[k-1] + \
+                                      self.Theta_TK[t, k] * self.Phi_KV[k, v]
 
                     norm = self.P_K[self.K-1]
                     for _ in range(y_tv):
-                        k = _searchsorted(norm * gsl_rng_uniform(self.rng), self.P_K)
+                        u = gsl_rng_uniform(self.rng)
+                        k = _searchsorted(norm * u, self.P_K)
                         self.Y_TK[t, k] += 1
                         self.Y_KV[k, v] += 1
 
-                else: # otherwise use conditional binom method via GSL's multinomial
+                else: # use conditional binom method via GSL's multinomial
                     for k in range(self.K):
                         self.P_K[k] = self.Theta_TK[t, k] * self.Phi_KV[k, v]
 
@@ -269,7 +277,7 @@ cdef class PGDS(MCMCModel):
     cdef void _update_L_TKK(self):
         cdef:
             int t, k, k1, m, _
-            double norm, mu, zeta
+            double norm, mu, zeta, r, u
             unsigned int l_tk, l_tkk
             list indices
 
@@ -300,19 +308,21 @@ cdef class PGDS(MCMCModel):
                 if l_tk == 0:
                     continue
 
-                if (l_tk < self.K) and (self.K < 40):  # use CDF/searchsorted method
+                if (l_tk < self.K) and (self.K < 40): # use CDF/searchsorted
                     self.P_K[0] = self.Theta_TK[t, 0] * self.Pi_KK[0, k]
                     for k1 in range(1, self.K):
-                        self.P_K[k1] = self.P_K[k1-1] + self.Theta_TK[t, k1] * self.Pi_KK[k1, k]
+                        self.P_K[k1] = self.P_K[k1-1] + \
+                                       self.Theta_TK[t, k1] * self.Pi_KK[k1, k]
 
                     norm = self.P_K[self.K-1]
                     for _ in range(l_tk):
-                        k1 = _searchsorted(norm * gsl_rng_uniform(self.rng), self.P_K)
+                        u = gsl_rng_uniform(self.rng)
+                        k1 = _searchsorted(norm * u, self.P_K)
                         self.L_KK[k1, k] += 1
                         self.L_TK[t, k1] += 1
                         self.L_TKK[t, k1, k] += 1
                 
-                else:  # otherwise use conditional binom method via GSL's multinomial
+                else:  # otherwise use conditional binom via GSL's multinomial
                     for k1 in range(self.K):
                         self.P_K[k1] = self.Theta_TK[t, k1] * self.Pi_KK[k1, k]
                     
@@ -332,7 +342,7 @@ cdef class PGDS(MCMCModel):
     cdef void _update_Theta_TK(self):
         cdef:
             int k, t
-            double shape, scale, tau
+            double shp, rte, tau
             list indices
 
         self._update_zeta_T()
@@ -341,40 +351,43 @@ cdef class PGDS(MCMCModel):
         indices = range(self.K)
         np.random.shuffle(indices)
         for t in range(self.T):
-            scale = 1. / (tau + self.zeta_T[t] + self.delta_T[t])
+            rte = tau + self.zeta_T[t] + self.delta_T[t]
            
             for k in indices:
                 if t == 0:
-                    shape = tau * self.nu_K[k]
+                    shp = tau * self.nu_K[k]
                 else:
-                    shape = tau * np.dot(self.Theta_TK[t-1], self.Pi_KK[:, k])
-                shape += self.L_TK[t, k] + self.Y_TK[t, k]
-                self.Theta_TK[t, k] = _sample_gamma(self.rng, shape, scale)
+                    shp = tau * np.dot(self.Theta_TK[t-1], self.Pi_KK[:, k])
+                shp += self.L_TK[t, k] + self.Y_TK[t, k]
+                self.Theta_TK[t, k] = _sample_gamma(self.rng, shp, 1. / rte)
 
     cdef void _update_Phi_KV(self):
         cdef: 
             int k
+            double eps
+            gsl_rng * rng
+
+        eps = self.eps
+        rng = self.rng
 
         for k in range(self.K):
-            _sample_dirichlet(self.rng,
-                              np.add(self.eps, self.Y_KV[k]),
-                              self.Phi_KV[k])
+            _sample_dirichlet(rng, np.add(eps, self.Y_KV[k]), self.Phi_KV[k])
             assert self.Phi_KV[k, 0] >= 0
 
     cdef void _update_delta_T(self):
         cdef:
             int t
-            double shape, scale
+            double shp, rte
 
         if self.stationary == 0:
             for t in range(self.T):
-                shape = self.eps + self.Y_T[t]
-                scale = 1. / (self.eps + np.sum(self.Theta_TK[t, :]))
-                self.delta_T[t] = _sample_gamma(self.rng, shape, scale)
+                shp = self.eps + self.Y_T[t]
+                rte = self.eps + np.sum(self.Theta_TK[t, :])
+                self.delta_T[t] = _sample_gamma(self.rng, shp, 1. / rte)
         else:
-            shape = self.eps + np.sum(self.Y_T)
-            scale = 1. / (self.eps + np.sum(self.Theta_TK))
-            self.delta_T[:] = _sample_gamma(self.rng, shape, scale)
+            shp = self.eps + np.sum(self.Y_T)
+            rte = self.eps + np.sum(self.Theta_TK)
+            self.delta_T[:] = _sample_gamma(self.rng, shp, 1. / rte)
 
     cdef void _update_Pi_KK(self):
         cdef:
@@ -397,42 +410,42 @@ cdef class PGDS(MCMCModel):
             _sample_dirichlet(self.rng, self.shp_KK[k], self.Pi_KK[k])
             assert np.isfinite(self.Pi_KK[k]).all()
 
-    cdef void _update_xi_K(self):
-
+    cdef void _update_H_KK_and_lnq_K(self):
         cdef:
-            int h, k, l_kk, l_k
-            double eps, nu, c, nu_k, xi_k, lnq_k, tmp
+            int k, k2, l_k
+            double nu, nu_k, xi_k, tmp, r
 
-        eps = self.eps
         nu = np.sum(self.nu_K)
-
-        h = c = 0
         for k in range(self.K):
             nu_k = self.nu_K[k]
             xi_k = self.xi_K[k]
-
-            l_kk = self.L_KK[k, k]
-            if l_kk > 0:  # crt draw is 0 if l_kk = 0
-                h += _sample_crt(self.rng, l_kk, nu_k * xi_k)
+            r = nu_k * xi_k
+            self.H_KK[k, k] = _sample_crt(self.rng, self.L_KK[k, k], r)
+            assert self.H_KK[k, k] >= 0
+            for k2 in range(self.K):
+                if k2 == k:
+                    continue
+                r = nu_k * self.nu_K[k2]
+                self.H_KK[k, k2] = _sample_crt(self.rng, self.L_KK[k, k2], r)
+                assert self.H_KK[k, k2] >= 0
 
             l_k = np.sum(self.L_KK[k])
-            if l_k > 0:  # q_k = 1 if l_k = 0, thus log(q_k) = 0 if l_k = 0
-                lnq_k = _sample_lnbeta(self.rng, nu_k * (xi_k + nu - nu_k), l_k)
-                c -= nu_k * lnq_k
-
-        self.xi_K[:] = _sample_gamma(self.rng, eps + h, 1. / (eps + c))
+            self.lnq_K[k] = 0
+            if l_k > 0:
+                tmp = (xi_k  + nu - nu_k)
+                self.lnq_K[k] = _sample_lnbeta(self.rng, nu_k * tmp, l_k)
+                assert np.isfinite(self.lnq_K[k])
 
     cdef void _update_nu_K(self):
         cdef:
-            int k, k2, m_k, l_0k, l_kk, l_k, h_k
-            double tau, gam_k, zeta, nu, nu_k, xi_k, shp, rte, c_k, tmp, r, lnq
+            int k, k2, m_k, l_0k
+            double tau, gam_k, zeta, nu, nu_k, shp, rte
             list indices
 
         self._update_zeta_T()
-
         tau = self.tau
-        gam_k = self.gam / self.K
         zeta = tau * log1p((self.delta_T[0] + self.zeta_T[0]) / tau)
+        gam_k = self.gam / self.K
         nu = np.sum(self.nu_K)
 
         indices = range(self.K)
@@ -441,56 +454,42 @@ cdef class PGDS(MCMCModel):
             nu_k = self.nu_K[k]
             m_k = self.Y_TK[0, k] + self.L_TK[0, k]
             l_0k = _sample_crt(self.rng, m_k, tau * nu_k)
+            assert l_0k >= 0
             
             shp = gam_k + l_0k
             rte = self.beta + zeta
-            
-            if self.shrink == 1:
-                xi_k = self.xi_K[k]
-                l_kk = self.L_KK[k, k]
-                l_k = np.sum(self.L_KK[k])
-                
-                h_k = c_k = 0
 
-                if l_kk > 0:
-                    h_k = _sample_crt(self.rng, l_kk, nu_k * xi_k)
-                
-                if l_k > 0:
-                    tmp = (xi_k + nu - nu_k)
-                    lnq = _sample_lnbeta(self.rng, nu_k * tmp, l_k)
-                    assert np.isfinite(lnq)
-                    c_k = -tmp * lnq
-                
+            if self.shrink == 1:
+                shp += self.H_KK[k, k]
+                rte -= (self.xi_K[k] + nu - nu_k) * self.lnq_K[k]
                 for k2 in range(self.K):
                     if k2 == k:
                         continue
-                    
-                    r = nu_k * self.nu_K[k2]
-                    h_k += _sample_crt(self.rng, self.L_KK[k, k2], r)
-                    h_k += _sample_crt(self.rng, self.L_KK[k2, k], r)
+                    shp += self.H_KK[k, k2] + self.H_KK[k2, k]
+                    rte -= self.nu_K[k2] * self.lnq_K[k2]
 
-                    l_k2 = np.sum(self.L_KK[k2])
-                    if l_k2 > 0:
-                        tmp = self.nu_K[k2] * (self.xi_K[k2] + nu - self.nu_K[k2])
-                        lnq = _sample_lnbeta(self.rng, tmp, l_k2)
-                        assert np.isfinite(lnq)
-                        c_k -= self.nu_K[k2] * lnq
-
-                shp += h_k
-                rte += c_k
             assert np.isfinite(shp) and np.isfinite(rte)
-            
             nu -= nu_k
             self.nu_K[k] = _sample_gamma(self.rng, shp, 1. / rte)
             nu += self.nu_K[k]
 
+    cdef void _update_xi_K(self):
+
+        cdef:
+            double shp, rte
+        
+        shp = rte = self.eps
+        for k in range(self.K):
+            shp += self.H_KK[k, k]
+            rte -= self.nu_K[k] * self.lnq_K[k]
+        
+        assert np.isfinite(shp) and np.isfinite(rte)
+        self.xi_K[:] = _sample_gamma(self.rng, shp, 1. / rte)
 
     cdef void _update_beta(self):
         cdef: 
-            double shape, scale
+            double shp, rte
 
-        shape = self.eps + self.gam
-        scale = 1. / (self.eps + np.sum(self.nu_K))
-        self.beta = _sample_gamma(self.rng, shape, scale)
-
-
+        shp = self.eps + self.gam
+        rte = self.eps + np.sum(self.nu_K)
+        self.beta = _sample_gamma(self.rng, shp, 1. / rte)
