@@ -33,7 +33,8 @@ def get_results(pattern='smoothing_eval.txt'):
         with open(eval_file) as f:
             lines = [line.rstrip() for line in f.readlines()]
             header = lines[0]
-            eval_lines = lines[1:]
+            eval_lines = [x for x in lines if x.split()[0] != 'ITN']       # dont include header lines
+            eval_lines = [x for x in eval_lines if int(x.split()[0]) > 0]  # dont include initialization error
 
         col_names = header.split()
         assert col_names[0] == 'ITN'
