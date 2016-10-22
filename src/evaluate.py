@@ -71,11 +71,21 @@ def save_avg_smoothing_eval(results_dir):
         np.savez(results_dir.joinpath('avg_smoothed.npz'), avg_pred_N=avg_pred_N)
 
 
+def is_results_dir(results_dir):
+    return results_dir.joinpath('params.p').exists()
+
+
 if __name__ == '__main__':
     p = ArgumentParser()
     p.add_argument('-r', '--results', type=path, required=True)
     args = p.parse_args()
 
-    assert args.results.exists()
-    save_avg_forecast_eval(args.results)
-    save_avg_smoothing_eval(args.results)
+    if is_results_dir(args.results):
+        save_avg_forecast_eval(args.results)
+        save_avg_smoothing_eval(args.results)
+    else:
+        for subdir in args.results.walkdirs():
+            if is_results_dir(subdir):
+                save_avg_forecast_eval(subdir)
+                save_avg_smoothing_eval(subdir)
+                print subdir
