@@ -63,7 +63,7 @@ def submit_train_job(data_file, K=100, version='pgds', num_itns=6000,
     seed = rn.randint(10000)
     if version == 'pgds':
         cmd = '%s %s ' % (PYTHON_INSTALLATION, CODE_DIR.joinpath('run_pgds.py'))
-        cmd += '-d=%s -o=%s -k=%d -v ' % (data_file, out_dir, version, K)
+        cmd += '-d=%s -o=%s -k=%d -v ' % (data_file, out_dir, K)
         cmd += '--stationary --steady --num_itns=%d --seed=%d ' % (num_itns, seed)
         cmd += '--save_every=%d --save_after=%d --eval_every=%d --eval_after=%d' % (save_every,
                                                                                     save_after,
