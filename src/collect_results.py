@@ -9,12 +9,23 @@ from collections import defaultdict
 
 RESULTS_DIR = path('/mnt/nfs/work1/wallach/aschein/results/NIPS16/camera_ready')
 
+GDELT_RESULTS_DIR = RESULTS_DIR.joinpath('gdelt/directed')
 
-def foo(pattern='smoothing_eval.txt'):
+
+def print_averaged_results(pattern='smoothing_eval.txt'):
+    print pattern
+    results = get_results(pattern)
+    for k, v in results.iteritems():
+        print '%s: %f +- %f' % (k, np.mean(v), np.std(v))
+
+
+def get_results(pattern='smoothing_eval.txt'):
     """
     Finds all results files in a directory and its sub-directories.
 
-    Returns mean and std across each file for each error metric.
+    This will aggregate all the results (e.g., for averaging).
+
+    Returns a dict where keys are error metrics and vals are lists of result values.
     """
     results = defaultdict(list)
 
@@ -32,11 +43,26 @@ def foo(pattern='smoothing_eval.txt'):
             metric_vals = [float(m) for m in line.split()[1:]]
             for k, v in zip(metric_names, metric_vals):
                 results[k].append(v)
+    return results
 
-    print pattern
-    for k, v in results.iteritems():
-        print '%s: %f +- %f' % (k, np.mean(v), np.std(v))
 
+def foo():
+    dataset_dirs = [RESULTS_DIR.joinpath(x) for x in ['gdelt/directed',  'icews/undirected']]
+
+    for dataset_dir in dataset_dirs:
+        for pred_type in ['smoothing', 'forecast']:
+            name = 'gdelt' if 'gdelt' in dataset_dir else 'icews'
+            name += '-%s' % pred_type
+            print name
+            print 'MODEL\tMRE\t\tMAE\t\tRMSE'
+            pattern = dataset_dir.joinpath('K_100/masked_subset_[1|2]/pgds/*%s_eval.txt' % pred_type)
+            results = get_results(pattern)
+            print 'pgds\t%f\t%f\t%f' % (results['MRE'], results['MAE'], results['RMSE'])
+            for K in [5, 10, 25, 50, 100]:
+                pattern = dataset_dir.joinpath('K_%d/masked_subset_[1|2]/lds/*%s_eval.txt' % (K, pred_type))
+                results = get_results(pattern)
+                print 'lds%d\t%f\t%f\t%f' % (K, results['MRE'], results['MAE'], results['RMSE'])
+            print
 
 if __name__ == '__main__':
     p = ArgumentParser()
@@ -44,4 +70,5 @@ if __name__ == '__main__':
     args = p.parse_args()
 
     # foo(RESULTS_DIR.joinpath('icews/undirected/2001-D/*/K_10/lds/smoothing_eval.txt'))
-    foo(args.pattern)
+    # print_averaged_results(args.pattern)
+    foo()
