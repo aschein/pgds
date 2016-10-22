@@ -18,6 +18,9 @@ def foo(out_dir, pattern='smoothing_eval.txt'):
     """
     results = defaultdict(list)
 
+    print
+    print pattern
+    print
     for eval_file in glob(pattern):
         print eval_file
         with open(eval_file) as f:
