@@ -11,12 +11,12 @@
 import sys
 import numpy as np
 cimport numpy as np
-from time import time
 from libc.math cimport exp, log, log1p, expm1
 
 from fatwalrus.mcmc_model cimport MCMCModel
-from fatwalrus.sample cimport _sample_gamma, _sample_dirichlet, _sample_lnbeta
-from fatwalrus.sample cimport _sample_crt, _searchsorted, _sample_trunc_poisson
+from fatwalrus.sample cimport _sample_gamma, _sample_dirichlet, _sample_lnbeta,\
+                              _sample_crt, _sample_trunc_poisson
+
 from lambertw cimport _simulate_zeta
 
 cdef extern from "gsl/gsl_rng.h" nogil:
@@ -25,7 +25,6 @@ cdef extern from "gsl/gsl_rng.h" nogil:
 
 cdef extern from "gsl/gsl_randist.h" nogil:
     double gsl_rng_uniform(gsl_rng * r)
-    double gsl_ran_gamma(gsl_rng * r, double a, double b)
     unsigned int gsl_ran_poisson(gsl_rng * r, double mu)
     void gsl_ran_multinomial(gsl_rng * r,
                              size_t K,
@@ -53,18 +52,20 @@ cdef class PGDS(MCMCModel):
                  double tau=1., int shrink=1, int stationary=0, int steady=0,
                  int binary=0, object seed=None):
 
-        self.T = T
-        self.V = V
-        self.K = K
-        self.eps = eps
-        self.gam = gam
-        self.tau = tau
-        self.shrink = shrink
-        self.stationary = stationary
-        self.steady = steady
+        super(PGDS, self).__init__(seed)
+        
+        self.T = self.param_list['T'] = T
+        self.V = self.param_list['V'] = V
+        self.K = self.param_list['K'] = K
+        self.eps = self.param_list['eps'] = eps
+        self.gam = self.param_list['gam'] = gam
+        self.tau = self.param_list['tau'] = tau
+        self.binary = self.param_list['binary'] = binary
+        self.shrink = self.param_list['shrink'] = shrink
+        self.stationary = self.param_list['stationary'] = stationary
+        self.steady = self.param_list['steady'] = steady
         if steady == 1 and stationary == 0:
             raise ValueError('Steady-state only valid for stationary model.')
-        self.binary = binary
 
         self.beta = 1.
         self.nu_K = np.zeros(K)
@@ -102,18 +103,18 @@ cdef class PGDS(MCMCModel):
         self.subs_P2 = np.zeros((self.P, 2), dtype=np.int32)
         self.vals_P = np.zeros(self.P, dtype=np.int32)
 
-        super(PGDS, self).__init__(seed)
+        
 
-    def fit(self, data, num_itns=1000, verbose=True, burnin={}):
+    def fit(self, data, num_itns=1000, verbose=True, initialize=True, burnin={}):
         if not isinstance(data, np.ma.core.MaskedArray):
-            data = np.ma.core.MaskedArray(data)
+            data = np.ma.array(data, mask=None)
         
         assert data.shape == (self.T, self.V)
         assert (data >= 0).all()
         if self.binary == 1:
             assert (data <= 1).all()
 
-        filled_data = data.filled(fill_value=-1).astype(np.int32)
+        filled_data = data.astype(np.int32).filled(fill_value=-1)
         subs = filled_data.nonzero()
         self.vals_P = filled_data[subs]  # missing values will be -1
         self.subs_P2 = np.array(zip(*subs), dtype=np.int32)
@@ -122,22 +123,25 @@ cdef class PGDS(MCMCModel):
         if self.binary == 0:
             filled_data[filled_data == -1] = 0
             self.Y_TV = np.ascontiguousarray(filled_data, dtype=np.int32)
+            # self.Y_TV = np.ascontiguousarray(init_missing_data(data))
             self.Y_T = np.sum(self.Y_TV, axis=1, dtype=np.int32)
             self.y_ = np.sum(self.Y_T)
 
-        self._init_state()
+        if initialize:
+            self._init_state()
+
         self._update(num_itns=num_itns, verbose=int(verbose), burnin=burnin)
 
-    def reconstruct(self, partial_state={}, subs=()):
-        Theta_TK = self.Theta_TK
+    def reconstruct(self, subs=(), partial_state={}):
+        Theta_TK = np.array(self.Theta_TK)
         if 'Theta_TK' in partial_state.keys():
             Theta_TK = partial_state['Theta_TK']
 
-        Phi_KV = self.Phi_KV
+        Phi_KV = np.array(self.Phi_KV)
         if 'Phi_KV' in partial_state.keys():
             Phi_KV = partial_state['Phi_KV']
 
-        delta_T = self.delta_T
+        delta_T = np.array(self.delta_T)
         if 'delta_T' in partial_state.keys():
             delta_T = partial_state['delta_T']
 
@@ -161,7 +165,7 @@ cdef class PGDS(MCMCModel):
             int C, S, K, c, s, k, v
             double[:,::1] Theta_SK
             double[::1] delta_S, shp_K
-            double rte, delta, tau
+            double rte, delta, tau, mu_csv
 
         C = rates_CSV.shape[0]
         S = rates_CSV.shape[1]
@@ -194,10 +198,12 @@ cdef class PGDS(MCMCModel):
                     else:
                         Theta_SK[s, k] = _sample_gamma(self.rng, shp_K[k], rte)
 
-                    rates_CSV[c, s] = np.dot(Theta_SK[s], self.Phi_KV) * delta
-                    if self.binary == 1:
-                        for v in range(self.V):
-                            rates_CSV[c, s, v] = -expm1(-rates_CSV[c, s, v])
+                    for v in range(self.V):
+                        mu_csv = delta * np.dot(Theta_SK[s], self.Phi_KV[:, v])
+                        if self.binary == 1:
+                            rates_CSV[c, s, v] = -expm1(-mu_csv)
+                        else:
+                            rates_CSV[c, s, v] = mu_csv
 
     def forecast(self, n_timesteps=1, n_chains=1, mode='arithmetic'):
         assert mode in ['arithmetic', 'geometric', 'sample']
@@ -239,7 +245,7 @@ cdef class PGDS(MCMCModel):
     cdef void _init_state(self):
         cdef:
             int K, k, k2, t
-            double eps, tau, shape, theta_tk
+            double eps, tau, shape, theta_tk, nu_k
             gsl_rng * rng
 
         K = self.K
@@ -250,13 +256,16 @@ cdef class PGDS(MCMCModel):
         self.delta_T[:] = 1.
         self._update_zeta_T()
 
-        self.gam = 2.
         self.beta = 1.
         self.tau = 1.
 
         self.xi_K[:] = 1.
+
+        self.nu_ = 0
         for k in range(K):
-            self.nu_K[k] = _sample_gamma(rng, 10., 0.1)
+            nu_k = _sample_gamma(rng, 10., 0.1)
+            self.nu_K[k] = nu_k
+            self.nu_ += nu_k
 
         for k in range(K):
             for k2 in range(K):
@@ -288,7 +297,7 @@ cdef class PGDS(MCMCModel):
         delta = np.mean(self.delta_T)
         print 'ITERATION %d: total aux counts: %d\t \
                mean theta: %.4f\t mean delta: %f\n' % \
-               (self.total_iter, l, theta, delta) 
+               (self.total_itns, l, theta, delta) 
 
     cdef void _generate_state(self):
         """
@@ -443,7 +452,7 @@ cdef class PGDS(MCMCModel):
                     mu_tv += self.Theta_TK[t, k] * self.Phi_KV[k, v]
                 mu_tv *= self.delta_T[t]
 
-                if (self.vals_P[p] == -1):
+                if (self.vals_P[p] == -1) and (self.total_itns > 0):
                     y_tv = gsl_ran_poisson(self.rng, mu_tv)
                 else:
                     y_tv = _sample_trunc_poisson(self.rng, mu_tv)
@@ -520,26 +529,29 @@ cdef class PGDS(MCMCModel):
                             self.L_TK[t, k1] += l_tkk
                             self.L_TKK[t, k1, k] = l_tkk
 
-    cdef void _update_Theta_TK(self):
+    cdef void _update_Theta_TK(self) nogil:
         cdef:
-            int k, t
-            double shp, rte, tau, theta_tk
+            int k, k1, t
+            double shp, sca, tau, theta_tk
 
         tau = self.tau
 
         self.theta_ = 0
         self.Theta_T[:] = 0
         for t in range(self.T):
-            rte = tau + self.zeta_T[t] + self.delta_T[t]
+            sca = 1. / (tau + self.zeta_T[t] + self.delta_T[t])
            
             for k in range(self.K):
                 if t == 0:
                     shp = tau * self.nu_K[k]
                 else:
-                    shp = tau * np.dot(self.Theta_TK[t-1], self.Pi_KK[:, k])
+                    shp = 0
+                    for k1 in range(self.K):
+                        shp += self.Theta_TK[t-1, k1] * self.Pi_KK[k1, k]
+                    shp *= tau
                 shp += self.L_TK[t, k] + self.Y_TK[t, k]
                 
-                theta_tk = _sample_gamma(self.rng, shp, 1. / rte)
+                theta_tk = _sample_gamma(self.rng, shp, sca)
                 self.Theta_TK[t, k] = theta_tk
                 self.Theta_T[t] += theta_tk
                 self.theta_ += theta_tk
@@ -622,6 +634,7 @@ cdef class PGDS(MCMCModel):
                 tmp = (xi_k  + self.nu_ - nu_k)
                 self.lnq_K[k] = _sample_lnbeta(self.rng, nu_k * tmp, l_k)
                 assert np.isfinite(self.lnq_K[k])
+                assert self.lnq_K[k] <= 0
 
     cdef void _update_nu_K(self):
         cdef:
@@ -636,30 +649,31 @@ cdef class PGDS(MCMCModel):
         # indices = range(self.K)
         # np.random.shuffle(indices)
 
-        with nogil:
-            for k in range(self.K):
-                nu_k = self.nu_K[k]
-                m_k = self.Y_TK[0, k] + self.L_TK[0, k]
-                l_0k = _sample_crt(self.rng, m_k, tau * nu_k)
-                # assert l_0k >= 0
+        for k in range(self.K):
+            nu_k = self.nu_K[k]
+            m_k = self.Y_TK[0, k] + self.L_TK[0, k]
+            l_0k = _sample_crt(self.rng, m_k, tau * nu_k)
+            assert l_0k >= 0
+            
+            shp = gam_k + l_0k
+            rte = self.beta + zeta
+
+            if self.shrink == 1:
+                shp += self.H_KK[k, k]
+                rte += (self.xi_K[k] + self.nu_ - nu_k) * (-self.lnq_K[k])
+                for k2 in range(self.K):
+                    if k2 == k:
+                        continue
+                    shp += self.H_KK[k, k2] + self.H_KK[k2, k]
+                    rte += self.nu_K[k2] * (-self.lnq_K[k2])
                 
-                shp = gam_k + l_0k
-                rte = self.beta + zeta
-
-                if self.shrink == 1:
-                    shp += self.H_KK[k, k]
-                    rte -= (self.xi_K[k] + self.nu_ - nu_k) * self.lnq_K[k]
-                    for k2 in range(self.K):
-                        if k2 == k:
-                            continue
-                        shp += self.H_KK[k, k2] + self.H_KK[k2, k]
-                        rte -= self.nu_K[k2] * self.lnq_K[k2]
-                # assert np.isfinite(shp) and np.isfinite(rte)
-
-                self.nu_ -= nu_k
-                nu_k = _sample_gamma(self.rng, shp, 1. / rte)
-                self.nu_K[k] = nu_k
-                self.nu_ += nu_k
+            assert np.isfinite(shp) and np.isfinite(rte)
+            assert shp >= 0 and rte >= 0
+            
+            self.nu_ -= nu_k
+            nu_k = _sample_gamma(self.rng, shp, 1. / rte)
+            self.nu_K[k] = nu_k
+            self.nu_ += nu_k
 
     cdef void _update_xi_K(self) nogil:
 
