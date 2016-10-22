@@ -120,7 +120,7 @@ def main():
                             model_jid, out_dir = submit_train_job(data_file=masked_data_file,
                                                                   K=K,
                                                                   version=version,
-                                                                  num_itns=1)
+                                                                  num_itns=10)
                         model_depend.append(model_jid)
 
 if __name__ == '__main__':
