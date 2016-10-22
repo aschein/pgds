@@ -63,7 +63,7 @@ def get_averaged_results(pattern='avg_smoothing_eval.txt'):
         metric_names = col_names
 
         for line in eval_lines:
-            metric_vals = [float(m) for m in line.split()[1:]]
+            metric_vals = [float(m) for m in line.split()]
             for k, v in zip(metric_names, metric_vals):
                 results[k].append(v)
     return results
