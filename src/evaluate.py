@@ -27,7 +27,7 @@ def save_avg_forecast_eval(results_dir):
     _, data_SV, _ = get_data_for_results_dir(results_dir)
 
     forecast_files = glob(results_dir.joinpath('*forecast_[1-9]*.npz'))  # excludes 0th forecast
-
+    print forecast_files
     if forecast_files:
         avg_pred_SV = np.zeros_like(data_SV)
 
