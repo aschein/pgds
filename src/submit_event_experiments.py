@@ -122,7 +122,6 @@ def main():
                                                                   version=version,
                                                                   num_itns=1)
                         model_depend.append(model_jid)
-                        sys.exit()
 
 if __name__ == '__main__':
     main()
