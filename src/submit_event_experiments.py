@@ -72,6 +72,11 @@ def submit_train_job(data_file, K=100, version='pgds', num_itns=6000,
         if 'piano_midi' in data_file:
             cmd += '--binary '
 
+    elif version == 'lds':
+        cmd = '%s %s ' % (PYTHON_INSTALLATION, CODE_DIR.joinpath('lds.py'))
+        cmd += '-d=%s -o=%s -k=%d -v ' % (data_file, out_dir, K)
+        cmd += '--stationary --num_itns=%d --seed=%d ' % (num_itns, seed)
+
     job_name = 'Y%s' % data_file.abspath().parent.namebase
     stdout = out_dir.joinpath('output-train.out')
     stderr = out_dir.joinpath('errors-train.out')
@@ -88,8 +93,11 @@ def main():
     gdelt_datasets = ['%d-D' % year for year in gdelt_years]
     gdelt_datasets = [GDELT_DIR.joinpath('directed', s) for s in gdelt_datasets]
 
-    Ks = [100]
-    versions = ['pgds']
+    # Ks = [100]
+    # versions = ['pgds']
+
+    Ks = [5, 10, 25, 50, 100]
+    versions = ['lds']
 
     for dataset in icews_datasets + gdelt_datasets:
         for mask_num in xrange(1, 5):
