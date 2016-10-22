@@ -55,7 +55,7 @@ def foo():
             name = 'gdelt' if 'gdelt' in dataset_dir else 'icews'
             name += '-%s' % pred_type
             print name
-            print 'MODEL\tMRE\tMAE\tRMSE'
+            print 'MODEL\t\tMRE\t\tMAE\t\tRMSE'
             pattern = dataset_dir.joinpath('*/masked_subset_[1|2]/K_100/pgds/*%s_eval.txt' % pred_type)
             results = get_results(pattern)
             print 'pgds\t%f\t%f\t%f' % (np.mean(results['MRE']),
