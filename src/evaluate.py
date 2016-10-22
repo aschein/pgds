@@ -27,7 +27,6 @@ def save_avg_forecast_eval(results_dir):
     _, data_SV, _ = get_data_for_results_dir(results_dir)
 
     forecast_files = glob(results_dir.joinpath('*forecast_[1-9]*.npz'))  # excludes 0th forecast
-    print forecast_files
     if forecast_files:
         avg_pred_SV = np.zeros_like(data_SV)
 
@@ -68,7 +67,7 @@ def save_avg_smoothing_eval(results_dir):
         np.savez(results_dir.joinpath('avg_smoothed.npz'), avg_pred_N=avg_pred_N)
 
 
-def main():
+if __name__ == '__main__':
     p = ArgumentParser()
     p.add_argument('-r', '--results', type=path, required=True)
     args = p.parse_args()
