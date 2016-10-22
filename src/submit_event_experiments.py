@@ -107,7 +107,7 @@ def main():
                                                               save_after=10,
                                                               eval_every=10,
                                                               eval_after=10)
-                        model_depend.append(jid)
+                        model_depend.append(model_jid)
                     sys.exit()
 
 if __name__ == '__main__':
