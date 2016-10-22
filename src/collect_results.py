@@ -10,7 +10,7 @@ from collections import defaultdict
 RESULTS_DIR = path('/mnt/nfs/work1/wallach/aschein/results/NIPS16/camera_ready')
 
 
-def foo(out_dir, pattern='smoothing_eval.txt'):
+def foo(pattern='smoothing_eval.txt'):
     """
     Finds all results files in a directory and its sub-directories.
 
