@@ -107,15 +107,22 @@ def main():
                 for version in versions:
                     model_depend = []
                     for _ in xrange(4):
-                        model_jid, out_dir = submit_train_job(data_file=masked_data_file,
-                                                              K=K,
-                                                              version=version,
-                                                              num_itns=6000,
-                                                              save_every=100,
-                                                              save_after=4000,
-                                                              eval_every=100,
-                                                              eval_after=4000)
+                        if version == 'pgds':
+                            model_jid, out_dir = submit_train_job(data_file=masked_data_file,
+                                                                  K=K,
+                                                                  version=version,
+                                                                  num_itns=6000,
+                                                                  save_every=100,
+                                                                  save_after=4000,
+                                                                  eval_every=100,
+                                                                  eval_after=4000)
+                        elif version == 'lds':
+                            model_jid, out_dir = submit_train_job(data_file=masked_data_file,
+                                                                  K=K,
+                                                                  version=version,
+                                                                  num_itns=1)
                         model_depend.append(model_jid)
+                        sys.exit()
 
 if __name__ == '__main__':
     main()
