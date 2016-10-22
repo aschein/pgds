@@ -39,6 +39,7 @@ def get_results(pattern='smoothing_eval.txt'):
         assert col_names[0] == 'ITN'
         metric_names = col_names[1:]
 
+        print eval_file
         for line in eval_lines:
             metric_vals = [float(m) for m in line.split()[1:]]
             for k, v in zip(metric_names, metric_vals):
