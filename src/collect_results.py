@@ -111,7 +111,3 @@ if __name__ == '__main__':
 
     foo(args.chain_results)
 
-
-    # foo(RESULTS_DIR.joinpath('icews/undirected/2001-D/*/K_10/lds/smoothing_eval.txt'))
-    # print_results(args.pattern)
-    foo()
