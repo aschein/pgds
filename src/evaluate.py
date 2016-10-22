@@ -72,7 +72,7 @@ def save_avg_smoothing_eval(results_dir):
 
 
 def is_results_dir(results_dir):
-    return results_dir.joinpath('params.p').exists()
+    return 0 < len(results_dir.files('*forecast*npz')) + len(results_dir.files('*smoothed*npz'))
 
 
 if __name__ == '__main__':

@@ -185,7 +185,7 @@ def main():
     assert checkpoint_itns[-1] == num_itns
 
     chain = get_chain_num(args.out)
-    with open(args.out.joinpath('params.p'), 'wb') as params_file:
+    with open(args.out.joinpath('%d_params.p' % chain), 'wb') as params_file:
         pickle.dump(model.get_params(), params_file)
 
     for c, itn in enumerate(checkpoint_itns):

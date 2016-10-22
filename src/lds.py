@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from path import path
 from time import time
 
+import cPickle as pickle
 import numpy as np
 import numpy.random as rn
 
@@ -172,6 +173,9 @@ def main():
     model.fit(masked_data, initialize=True, num_itns=args.num_itns, verbose=args.verbose)
 
     chain = get_chain_num(args.out)
+    with open(args.out.joinpath('%d_params.p' % chain), 'wb') as params_file:
+        pickle.dump(model.get_params(), params_file)
+
     state_name = '%d_state.npz' % chain
     np.savez(args.out.joinpath(state_name), **model.get_state())
 
