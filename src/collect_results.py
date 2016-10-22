@@ -37,7 +37,7 @@ def foo(pattern='smoothing_eval.txt'):
             for k, v in zip(metric_names, metric_vals):
                 results[k].append(v)
 
-    print out_dir
+    print pattern
     for k, v in results.iteritems():
         print '%s: %f +- %f' % (k, np.mean(v), np.std(v))
 
