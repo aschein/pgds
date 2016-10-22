@@ -4,7 +4,7 @@ import numpy as np
 
 from glob import glob
 from path import path
-
+from argparse import ArgumentParser
 from collections import defaultdict
 
 RESULTS_DIR = path('/mnt/nfs/work1/wallach/aschein/results/NIPS16/camera_ready')
