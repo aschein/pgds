@@ -20,7 +20,10 @@ def get_data_for_results_dir(results_dir):
     data = data_dict['data']
     mask = data_dict['mask']
     data_TV, data_SV = get_train_forecast_split(data, mask)
-    return data_TV, data_SV, mask
+    T, V = data_TV.shape
+    assert data_SV is not None
+    mask_TV = mask[:T]
+    return data_TV, data_SV, mask_TV
 
 
 def save_avg_forecast_eval(results_dir):
@@ -45,8 +48,8 @@ def save_avg_forecast_eval(results_dir):
 
 
 def save_avg_smoothing_eval(results_dir):
-    data_TV, _, mask = get_data_for_results_dir(results_dir)
-    data_N = data_TV[mask]
+    data_TV, _, mask_TV = get_data_for_results_dir(results_dir)
+    data_N = data_TV[mask_TV]
 
     smoothed_files = glob(results_dir.joinpath('*smoothed_[1-9]*.npz'))
 
