@@ -102,11 +102,11 @@ def main():
                         model_jid, out_dir = submit_train_job(data_file=masked_data_file,
                                                               K=K,
                                                               version=version,
-                                                              num_itns=6000,
-                                                              save_every=100,
-                                                              save_after=4000,
-                                                              eval_every=100,
-                                                              eval_after=4000)
+                                                              num_itns=100,
+                                                              save_every=10,
+                                                              save_after=10,
+                                                              eval_every=10,
+                                                              eval_after=10)
                         model_depend.append(jid)
                     sys.exit()
 
