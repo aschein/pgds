@@ -28,7 +28,7 @@ def save_avg_forecast_eval(results_dir):
 
     forecast_files = glob(results_dir.joinpath('*forecast_[1-9]*.npz'))  # excludes 0th forecast
     if forecast_files:
-        avg_pred_SV = np.zeros_like(data_SV)
+        avg_pred_SV = np.zeros_like(data_SV, dtype=float)
 
         for forecast_file in forecast_files:
             avg_pred_SV += np.load(forecast_file)['pred_SV']
@@ -51,7 +51,7 @@ def save_avg_smoothing_eval(results_dir):
     smoothed_files = glob(results_dir.joinpath('*smoothed_[1-9]*.npz'))
 
     if smoothed_files:
-        avg_pred_N = np.zeros_like(data_N)
+        avg_pred_N = np.zeros_like(data_N, dtype=float)
 
         for smoothed_file in smoothed_files:
             avg_pred_N += np.load(smoothed_file)['pred_N']
