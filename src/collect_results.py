@@ -39,4 +39,9 @@ def foo(out_dir, pattern='smoothing_eval.txt'):
 
 
 if __name__ == '__main__':
-    foo(RESULTS_DIR.joinpath('icews/undirected/2001-D/*/K_10/lds/smoothing_eval.txt'))
+    p = ArgumentParser()
+    p.add_argument('-p', '--pattern', type=str, required=True)
+    args = p.parse_args()
+
+    # foo(RESULTS_DIR.joinpath('icews/undirected/2001-D/*/K_10/lds/smoothing_eval.txt'))
+    foo(args.pattern)
