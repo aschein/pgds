@@ -57,11 +57,15 @@ def foo():
             print 'MODEL\tMRE\t\tMAE\t\tRMSE'
             pattern = dataset_dir.joinpath('K_100/masked_subset_[1|2]/pgds/*%s_eval.txt' % pred_type)
             results = get_results(pattern)
-            print 'pgds\t%f\t%f\t%f' % (results['MRE'], results['MAE'], results['RMSE'])
+            print 'pgds\t%f\t%f\t%f' % (np.mean(results['MRE']),
+                                        np.mean(results['MAE']),
+                                        np.mean(results['RMSE']))
             for K in [5, 10, 25, 50, 100]:
                 pattern = dataset_dir.joinpath('K_%d/masked_subset_[1|2]/lds/*%s_eval.txt' % (K, pred_type))
                 results = get_results(pattern)
-                print 'lds%d\t%f\t%f\t%f' % (K, results['MRE'], results['MAE'], results['RMSE'])
+                print 'lds%d\t%f\t%f\t%f' % (K, np.mean(results['MRE']),
+                                                np.mean(results['MAE']),
+                                                np.mean(results['RMSE']))
             print
 
 if __name__ == '__main__':
