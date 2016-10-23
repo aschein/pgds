@@ -42,7 +42,7 @@ def get_averaged_results(pattern='avg_smoothing_eval.txt'):
 
 
 def foo():
-    dataset_dirs = [RESULTS_DIR.joinpath(x) for x in ['gdelt/directed',  'icews/undirected']]
+    dataset_dirs = [RESULTS_DIR.joinpath(x) for x in ['gdelt/directed',  'icews/undirected', 'nips-data', 'dblp', 'stou']]
 
     for dataset_dir in dataset_dirs:
         for pred_type in ['smoothing', 'forecast']:
@@ -52,7 +52,7 @@ def foo():
             print 'MODEL\tMRE\t\tMAE\t\tRMSE'
             for version in ['pgds', 'gpdpfa', 'lds']:
                 K = 25 if version == 'lds' else 100
-                pattern = dataset_dir.joinpath('*/masked_subset_[5|6]/K_%d/%s' % (K, version))
+                pattern = dataset_dir.joinpath('*/masked_subset_[1|2]/K_%d/%s' % (K, version))
                 pattern = pattern.joinpath('avg_%s_eval.txt' % pred_type)
                 results = get_averaged_results(pattern)
                 print '%s\t%f\t%f\t%f' % (version,
