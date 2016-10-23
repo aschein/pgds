@@ -66,10 +66,6 @@ def foo():
                 pattern = pattern.joinpath('avg_%s_eval.txt' % pred_type)
                 results = get_averaged_results(pattern)
 
-                if not results['MRE']:
-                    print data_name, pred_type, version
-                    sys.exit()
-
                 print '%s\t%f\t%f\t%f' % (version,
                                           np.mean(results['MRE']),
                                           np.mean(results['MAE']),
