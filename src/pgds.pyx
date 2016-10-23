@@ -18,6 +18,7 @@ from fatwalrus.sample cimport _sample_gamma, _sample_dirichlet, _sample_lnbeta,\
                               _sample_crt, _sample_trunc_poisson
 
 from lambertw cimport _simulate_zeta
+from impute import init_missing_data
 
 cdef extern from "gsl/gsl_rng.h" nogil:
     ctypedef struct gsl_rng:
@@ -121,9 +122,9 @@ cdef class PGDS(MCMCModel):
         self.P = self.vals_P.shape[0]
 
         if self.binary == 0:
-            filled_data[filled_data == -1] = 0
-            self.Y_TV = np.ascontiguousarray(filled_data, dtype=np.int32)
-            # self.Y_TV = np.ascontiguousarray(init_missing_data(data))
+            # filled_data[filled_data == -1] = 0
+            # self.Y_TV = np.ascontiguousarray(filled_data, dtype=np.int32)
+            self.Y_TV = np.ascontiguousarray(init_missing_data(data))
             self.Y_T = np.sum(self.Y_TV, axis=1, dtype=np.int32)
             self.y_ = np.sum(self.Y_T)
 
@@ -452,7 +453,7 @@ cdef class PGDS(MCMCModel):
                     mu_tv += self.Theta_TK[t, k] * self.Phi_KV[k, v]
                 mu_tv *= self.delta_T[t]
 
-                if (self.vals_P[p] == -1) and (self.total_itns > 0):
+                if (self.vals_P[p] == -1) and (self.total_itns > 250):
                     y_tv = gsl_ran_poisson(self.rng, mu_tv)
                 else:
                     y_tv = _sample_trunc_poisson(self.rng, mu_tv)
