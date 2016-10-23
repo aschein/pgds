@@ -107,15 +107,35 @@ def main():
             for version in ['pgds', 'lds', 'gpdpfa']:
                 if mask_num == 5 and version == 'lds':
                     continue
+
+                if version == 'lds':
+                    num_itns = 10
+                else:
+                    if dataset in text_datasets:
+                        num_itns = 10000
+                        save_every = 250
+                        save_after = 5000
+                        eval_every = 250
+                        eval_after = 5000
+                    else:
+                        num_itns = 6000
+                        save_every = 100
+                        save_after = 4000
+                        eval_every = 100
+                        eval_after = 4000
+
                 Ks = [5, 10, 25] if version == 'lds' else [50, 100]
-                num_itns = 10 if version == 'lds' else 6000
                 for K in Ks:
                     model_depend = []
                     for _ in xrange(4):
                         model_jid, out_dir = submit_train_job(data_file=masked_data_file,
                                                               K=K,
                                                               version=version,
-                                                              num_itns=num_itns)
+                                                              num_itns=num_itns,
+                                                              save_every=save_every,
+                                                              save_after=save_after,
+                                                              eval_every=eval_every,
+                                                              eval_after=eval_after)
                         model_depend.append(model_jid)
                         sys.exit()
 
