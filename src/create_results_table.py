@@ -47,7 +47,7 @@ def foo():
 
     for dataset_dir, data_name in zip(dataset_dirs, data_names):
         for pred_type in ['smoothing', 'forecast']:
-            name = 'data_name-%s' % pred_type
+            name = '%s-%s' % (data_name, pred_type)
             print name
             print 'MODEL\tMRE\t\tMAE\t\tRMSE'
             for version in ['pgds', 'gpdpfa', 'lds']:
