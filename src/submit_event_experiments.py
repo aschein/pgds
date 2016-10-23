@@ -78,7 +78,7 @@ def submit_train_job(data_file, K=100, version='pgds', num_itns=6000,
     if 'piano_midi' in data_file:
         cmd += '--binary '
 
-    job_name = 'Y%s' % data_file.abspath().parent.namebase
+    job_name = '%s%d-%s' % (version, K, data_file.abspath().parent.namebase)
     stdout = out_dir.joinpath('output-train.out')
     stderr = out_dir.joinpath('errors-train.out')
     jid = qsub(cmd, job_name=job_name, stdout=stdout, stderr=stderr)
@@ -99,14 +99,12 @@ def main():
             masked_data_file = dataset.joinpath('masked_subset_%d.npz' % mask_num)
 
             for version in ['pgds', 'lds', 'gpdpfa']:
-                Ks = [5, 20, 50] if version == 'lds' else [50, 100]
+                Ks = [5, 10, 25, 50] if version == 'lds' else [50, 100]
                 num_itns = 10 if version == 'lds' else 6000
 
-                # for K in Ks:
-                for K in [100]:
+                for K in Ks:
                     model_depend = []
-                    # for _ in xrange(4):
-                    for _ in xrange(1):
+                    for _ in xrange(4):
                         model_jid, out_dir = submit_train_job(data_file=masked_data_file,
                                                               K=K,
                                                               version=version,
@@ -114,7 +112,6 @@ def main():
                                                               save_after=0,
                                                               eval_after=0)
                         model_depend.append(model_jid)
-            sys.exit()
 
 if __name__ == '__main__':
     main()
