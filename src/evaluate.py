@@ -3,7 +3,7 @@ import numpy as np
 from glob import glob
 from path import path
 from argparse import ArgumentParser
-from run_pgds import get_train_forecast_split, rmse, mae, mre, auc
+from run_mcmc_model import get_train_forecast_split, rmse, mae, mre, auc
 
 
 DATA_DIR = path('/mnt/nfs/work1/wallach/aschein/data/')
