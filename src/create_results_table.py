@@ -59,7 +59,7 @@ def foo():
             print 'MODEL\tMRE\t\tMAE\t\tRMSE'
             for version in ['pgds', 'gpdpfa', 'lds']:
                 K = 25 if version == 'lds' else 100
-                pattern = dataset_dir.joinpath('*masked_subset_[1|2]/K_%d/%s' % (K, version))
+                pattern = dataset_dir.joinpath('*/masked_subset_[1|2]/K_%d/%s' % (K, version))
                 pattern = pattern.joinpath('avg_%s_eval.txt' % pred_type)
                 results = get_averaged_results(pattern)
 
