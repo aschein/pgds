@@ -111,18 +111,11 @@ def main():
                 if version == 'lds':
                     num_itns = 10
                 else:
-                    if dataset in text_datasets:
-                        num_itns = 10000
-                        save_every = 250
-                        save_after = 5000
-                        eval_every = 250
-                        eval_after = 5000
-                    else:
-                        num_itns = 6000
-                        save_every = 100
-                        save_after = 4000
-                        eval_every = 100
-                        eval_after = 4000
+                    num_itns = 6000
+                    save_every = 100
+                    save_after = 4000
+                    eval_every = 100
+                    eval_after = 4000
 
                 Ks = [5, 10, 25] if version == 'lds' else [50, 100]
                 for K in Ks:
@@ -137,7 +130,6 @@ def main():
                                                               eval_every=eval_every,
                                                               eval_after=eval_after)
                         model_depend.append(model_jid)
-                        sys.exit()
 
 if __name__ == '__main__':
     main()
