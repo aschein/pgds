@@ -12,6 +12,7 @@ GDELT_DIR = path('/mnt/nfs/work1/wallach/aschein/data/gdelt/matrices')
 STOU_DIR = path('/mnt/nfs/work1/wallach/aschein/data/stou')
 NIPS_DIR = path('/mnt/nfs/work1/wallach/aschein/data/nips-data')
 DBLP_DIR = path('/mnt/nfs/work1/wallach/aschein/data/dblp')
+MUSIC_DIR = path('/mnt/nfs/work1/wallach/aschein/data/music/piano_midi/train')
 RESULTS_DIR = path('/mnt/nfs/work1/wallach/aschein/results/NIPS16/camera_ready')
 CODE_DIR = path('/home/aschein/research/pgds/src')
 
@@ -99,10 +100,16 @@ def main():
 
     text_datasets = [NIPS_DIR, STOU_DIR, DBLP_DIR]
 
-    for mask_num in [1, 2, 5, 3, 4]:
-        # for dataset in icews_datasets + gdelt_datasets:
-        for dataset in text_datasets:
-            masked_data_file = dataset.joinpath('masked_subset_%d.npz' % mask_num)
+    music_datasets = MUSIC_DIR.listdir('*train_4*') + MUSIC_DIR.listdir('*train_3*')
+
+    # for mask_num in [1, 2, 5, 3, 4]:
+    #     # for dataset in icews_datasets + gdelt_datasets:
+    #     for dataset in text_datasets:
+            # masked_data_file = dataset.joinpath('masked_subset_%d.npz' % mask_num)
+
+    for mask_num in [1, 2, 3]:
+        for dataset in music_datasets:
+            masked_data_file = dataset.joinpath('masked_subset_perc_%d.npz' % mask_num)
 
             for version in ['pgds', 'lds', 'gpdpfa']:
                 if mask_num == 5 and version == 'lds':
@@ -117,7 +124,11 @@ def main():
                     eval_every = 100
                     eval_after = 4000
 
-                Ks = [5, 10, 25] if version == 'lds' else [50, 100]
+                if dataset in music_datasets:
+                    Ks = [12, 25]
+                else:
+                    Ks = [5, 10, 25] if version == 'lds' else [50, 100]
+
                 for K in Ks:
                     model_depend = []
                     for _ in xrange(4):

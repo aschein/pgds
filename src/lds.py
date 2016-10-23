@@ -12,7 +12,7 @@ from copy import deepcopy
 from sklearn.base import BaseEstimator
 from pykalman import KalmanFilter
 
-from run_pgds import get_train_forecast_split, get_chain_num, save_forecast_eval, save_smoothing_eval
+from run_mcmc_model import get_train_forecast_split, get_chain_num, save_forecast_eval, save_smoothing_eval
 
 
 STATE_VARS = ['Pi_KK',
@@ -29,9 +29,10 @@ STATE_VARS = ['Pi_KK',
 class LDS(BaseEstimator):
     """Linear Dynamical System"""
 
-    def __init__(self, n_components=5, stationary=True, seed=None):
+    def __init__(self, n_components=5, stationary=True, binary=False, seed=None):
         self.n_components = n_components
         self.stationary = stationary
+        self.binary = binary
         self.total_itns = 0
         if seed is None:
             self.seed = rn.randint(100000)
@@ -149,6 +150,7 @@ def main():
     p.add_argument('-o', '--out', type=path, required=True)
     p.add_argument('-k', '--n_components', type=int, default=100)
     p.add_argument('--stationary', action="store_true", default=False)
+    p.add_argument('--binary', action="store_true", default=False)
     p.add_argument('-s', '--seed', type=int, default=None)
     p.add_argument('-v', '--verbose', action="store_true", default=False)
     p.add_argument('-n', '--num_itns', type=int, default=10)
@@ -169,7 +171,7 @@ def main():
 
     args.out.makedirs_p()
 
-    model = LDS(n_components=args.n_components, stationary=args.stationary, seed=args.seed)
+    model = LDS(n_components=args.n_components, stationary=args.stationary, binary=args.binary, seed=args.seed)
     model.fit(masked_data, initialize=True, num_itns=args.num_itns, verbose=args.verbose)
 
     chain = get_chain_num(args.out)

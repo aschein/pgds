@@ -3,6 +3,7 @@ import sys
 import cPickle as pickle
 import numpy as np
 import numpy.random as rn
+import sklearn.metrics as metrics
 
 from argparse import ArgumentParser
 from path import path
@@ -51,20 +52,33 @@ def mre(truth, pred):
     return (np.abs(truth - pred) / (truth + 1)).mean()
 
 
+def auc(truth, pred):
+    assert (truth[truth > 0] == 1).all() and (truth[truth < 1] == 0).all()
+    fpr, tpr, thresholds = metrics.roc_curve(truth, pred, pos_label=1)
+    return metrics.auc(fpr, tpr)
+
+
 def save_forecast_eval(data_SV, model, eval_path, pred_path=None):
     eval_str = ''
     if not eval_path.exists():
-        eval_str = 'ITN\tMAE\tMRE\tRMSE\n'
+        eval_str = 'ITN\tMAE\t\tMRE\t\tRMSE'
+        if model.get_params()['binary']:
+            eval_str += '\t\tAUC'
+        eval_str += '\n'
 
     S, V = data_SV.shape
     pred_SV = model.forecast(n_timesteps=S)
 
     itn = model.get_total_itns()
 
-    eval_str += '%d\t%f\t%f\t%f\n' % (itn,
-                                      mae(data_SV, pred_SV),
-                                      mre(data_SV, pred_SV),
-                                      rmse(data_SV, pred_SV))
+    eval_str += '%d\t%f\t%f\t%f' % (itn,
+                                    mae(data_SV, pred_SV),
+                                    mre(data_SV, pred_SV),
+                                    rmse(data_SV, pred_SV))
+    if model.get_params()['binary'] == 1:
+        eval_str += '\t%f' % auc(data_SV.ravel(), pred_SV.ravel())
+    eval_str += '\n'
+
     with open(eval_path, 'a+') as f:
         f.write(eval_str)
 
@@ -75,7 +89,10 @@ def save_forecast_eval(data_SV, model, eval_path, pred_path=None):
 def save_smoothing_eval(masked_data, model, eval_path, pred_path=None):
     eval_str = ''
     if not eval_path.exists():
-        eval_str = 'ITN\tMAE\tMRE\tRMSE\n'
+        eval_str = 'ITN\tMAE\t\tMRE\t\tRMSE'
+        if model.get_params()['binary'] == 1:
+            eval_str += '\t\tAUC'
+        eval_str += '\n'
 
     mask_TV = masked_data.mask
     assert mask_TV.any()
@@ -85,10 +102,14 @@ def save_smoothing_eval(masked_data, model, eval_path, pred_path=None):
 
     itn = model.get_total_itns()
 
-    eval_str += '%d\t%f\t%f\t%f\n' % (itn,
-                                      mae(data_N, pred_N),
-                                      mre(data_N, pred_N),
-                                      rmse(data_N, pred_N))
+    eval_str += '%d\t%f\t%f\t%f' % (itn,
+                                    mae(data_N, pred_N),
+                                    mre(data_N, pred_N),
+                                    rmse(data_N, pred_N))
+    if model.get_params()['binary']:
+        eval_str += '\t%f' % auc(data_N, pred_N)
+    eval_str += '\n'
+
     with open(eval_path, 'a+') as f:
         f.write(eval_str)
 
