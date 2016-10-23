@@ -60,11 +60,11 @@ def submit_train_job(data_file, K=100, version='pgds', num_itns=6000,
     out_dir = get_out_dir(data_file=data_file, K=K, version=version)
     out_dir.makedirs_p()
 
-    seed = rn.randint(10000)
+    seed = rn.randint(1111111111)
     if version in ['pgds', 'gpdpfa']:
         cmd = '%s %s ' % (PYTHON_INSTALLATION, CODE_DIR.joinpath('run_mcmc_model.py'))
         cmd += '-d=%s -o=%s -k=%d -v --version=%s ' % (data_file, out_dir, K, version)
-        cmd += '--stationary --steady --num_itns=%d --seed=%d --gam=%f ' % (num_itns, seed, 0.9 * K)
+        cmd += '--stationary --steady --num_itns=%d --seed=%d --gam=%f ' % (num_itns, seed, 0.5 * K)
         cmd += '--save_every=%d --save_after=%d --eval_every=%d --eval_after=%d ' % (save_every,
                                                                                      save_after,
                                                                                      eval_every,
@@ -103,7 +103,7 @@ def main():
                 num_itns = 10 if version == 'lds' else 6000
 
                 # for K in Ks:
-                for K in [200]:
+                for K in [100]:
                     model_depend = []
                     # for _ in xrange(4):
                     for _ in xrange(1):
