@@ -22,8 +22,9 @@ def get_data_for_results_dir(results_dir):
     mask = data_dict['mask']
     data_TV, data_SV = get_train_forecast_split(data, mask)
     T, V = data_TV.shape
-    assert data_SV is not None
-    mask_TV = mask[:T]
+    mask_TV = mask
+    if data_SV is not None:
+        mask_TV = mask[:T]
     return data_TV, data_SV, mask_TV
 
 
