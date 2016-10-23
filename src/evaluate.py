@@ -3,7 +3,7 @@ import numpy as np
 from glob import glob
 from path import path
 from argparse import ArgumentParser
-from run_pgds import get_train_forecast_split, rmse, mae, mre
+from run_pgds import get_train_forecast_split, rmse, mae, mre, auc
 
 
 DATA_DIR = path('/mnt/nfs/work1/wallach/aschein/data/')
@@ -43,7 +43,7 @@ def save_avg_forecast_eval(results_dir):
             a = mae(data_SV, avg_pred_SV)
             b = mre(data_SV, avg_pred_SV)
             c = rmse(data_SV, avg_pred_SV)
-            f.write('MAE\tMRE\tRMSE\n%f\t%f\t%f\n' % (a, b, c))
+            f.write('MAE\t\tMRE\t\tRMSE\n%f\t%f\t%f\n' % (a, b, c))
 
         np.savez(results_dir.joinpath('avg_forecast.npz'), avg_pred_SV=avg_pred_SV)
 
@@ -66,7 +66,12 @@ def save_avg_smoothing_eval(results_dir):
             a = mae(data_N, avg_pred_N)
             b = mre(data_N, avg_pred_N)
             c = rmse(data_N, avg_pred_N)
-            f.write('MAE\tMRE\tRMSE\n%f\t%f\t%f\n' % (a, b, c))
+
+            if 'piano' not in results_dir:
+                f.write('MAE\t\tMRE\t\tRMSE\n%f\t%f\t%f\n' % (a, b, c))
+            else:
+                d = auc(data_N, avg_pred_N)
+                f.write('MAE\t\tMRE\t\tRMSE\t\tAUC\n%f\t%f\t%f\t%f\n' % (a, b, c, d))
 
         np.savez(results_dir.joinpath('avg_smoothed.npz'), avg_pred_N=avg_pred_N)
 
