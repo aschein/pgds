@@ -13,6 +13,7 @@ def get_data_for_results_dir(results_dir):
     data_name = results_dir.split('camera_ready')[1].split('K_')[0].strip('/')
     data_name = data_name.replace('icews', 'icews/matrices')
     data_name = data_name.replace('gdelt', 'gdelt/matrices')
+    data_name = data_name.replace('piano_midi', 'music/piano_midi/train')
     data_file = DATA_DIR.joinpath(data_name + '.npz')
     if not data_file.exists():
         raise ValueError('File not found: %s' % data_file)
