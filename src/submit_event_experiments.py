@@ -103,7 +103,7 @@ def main():
                 num_itns = 10 if version == 'lds' else 6000
 
                 # for K in Ks:
-                for K in [50]:
+                for K in [200]:
                     model_depend = []
                     # for _ in xrange(4):
                     for _ in xrange(1):
