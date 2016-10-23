@@ -25,6 +25,7 @@ def get_averaged_results(pattern='avg_smoothing_eval.txt'):
     """
     results = defaultdict(list)
 
+    print pattern
     for eval_file in glob(pattern):
         print eval_file
         with open(eval_file) as f:
