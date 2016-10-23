@@ -43,11 +43,11 @@ def get_averaged_results(pattern='avg_smoothing_eval.txt'):
 
 def foo():
     dataset_dirs = [RESULTS_DIR.joinpath(x) for x in ['gdelt/directed',  'icews/undirected', 'nips-data', 'dblp', 'stou']]
+    data_names = ['gdelt', 'icews', 'nips', 'dblp', 'stou']
 
-    for dataset_dir in dataset_dirs:
+    for dataset_dir, data_name in zip(dataset_dirs, data_names):
         for pred_type in ['smoothing', 'forecast']:
-            name = 'gdelt' if 'gdelt' in dataset_dir else 'icews'
-            name += '-%s' % pred_type
+            name = 'data_name-%s' % pred_type
             print name
             print 'MODEL\tMRE\t\tMAE\t\tRMSE'
             for version in ['pgds', 'gpdpfa', 'lds']:
