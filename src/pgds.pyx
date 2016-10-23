@@ -146,7 +146,7 @@ cdef class PGDS(MCMCModel):
             delta_T = partial_state['delta_T']
 
         if not subs:
-            rates_TV = np.dot(Theta_TK, Phi_KV) * delta_T[:, np.newaxis]
+            rates_TV = np.einsum('tk,t,kv->tv', Theta_TK, delta_T, Phi_KV)
             if self.binary == 1:
                 rates_TV = -np.expm1(-rates_TV)
             return rates_TV
@@ -198,12 +198,12 @@ cdef class PGDS(MCMCModel):
                     else:
                         Theta_SK[s, k] = _sample_gamma(self.rng, shp_K[k], rte)
 
-                    for v in range(self.V):
-                        mu_csv = delta * np.dot(Theta_SK[s], self.Phi_KV[:, v])
-                        if self.binary == 1:
-                            rates_CSV[c, s, v] = -expm1(-mu_csv)
-                        else:
-                            rates_CSV[c, s, v] = mu_csv
+                for v in range(self.V):
+                    mu_csv = delta * np.dot(Theta_SK[s], self.Phi_KV[:, v])
+                    if self.binary == 1:
+                        rates_CSV[c, s, v] = -expm1(-mu_csv)
+                    else:
+                        rates_CSV[c, s, v] = mu_csv
 
     def forecast(self, n_timesteps=1, n_chains=1, mode='arithmetic'):
         assert mode in ['arithmetic', 'geometric', 'sample']
@@ -373,7 +373,7 @@ cdef class PGDS(MCMCModel):
         """
         cdef:
             int t, v, k
-            unsigned int y_tk, y_tkv
+            unsigned int y_tk, y_tvk
             double mu_tk
             tuple subs
 

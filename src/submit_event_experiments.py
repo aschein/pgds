@@ -61,21 +61,22 @@ def submit_train_job(data_file, K=100, version='pgds', num_itns=6000,
     out_dir.makedirs_p()
 
     seed = rn.randint(10000)
-    if version == 'pgds':
-        cmd = '%s %s ' % (PYTHON_INSTALLATION, CODE_DIR.joinpath('run_pgds.py'))
-        cmd += '-d=%s -o=%s -k=%d -v ' % (data_file, out_dir, K)
-        cmd += '--stationary --steady --num_itns=%d --seed=%d ' % (num_itns, seed)
-        cmd += '--save_every=%d --save_after=%d --eval_every=%d --eval_after=%d' % (save_every,
-                                                                                    save_after,
-                                                                                    eval_every,
-                                                                                    eval_after)
-        if 'piano_midi' in data_file:
-            cmd += '--binary '
+    if version in ['pgds', 'gpdpfa']:
+        cmd = '%s %s ' % (PYTHON_INSTALLATION, CODE_DIR.joinpath('run_mcmc_model.py'))
+        cmd += '-d=%s -o=%s -k=%d -v --version=%s ' % (data_file, out_dir, K, version)
+        cmd += '--stationary --steady --num_itns=%d --seed=%d --gam=%f ' % (num_itns, seed, 0.9 * K)
+        cmd += '--save_every=%d --save_after=%d --eval_every=%d --eval_after=%d ' % (save_every,
+                                                                                     save_after,
+                                                                                     eval_every,
+                                                                                     eval_after)
 
     elif version == 'lds':
         cmd = '%s %s ' % (PYTHON_INSTALLATION, CODE_DIR.joinpath('lds.py'))
         cmd += '-d=%s -o=%s -k=%d -v ' % (data_file, out_dir, K)
         cmd += '--stationary --num_itns=%d --seed=%d ' % (num_itns, seed)
+
+    if 'piano_midi' in data_file:
+        cmd += '--binary '
 
     job_name = 'Y%s' % data_file.abspath().parent.namebase
     stdout = out_dir.joinpath('output-train.out')
@@ -93,35 +94,27 @@ def main():
     gdelt_datasets = ['%d-D' % year for year in gdelt_years]
     gdelt_datasets = [GDELT_DIR.joinpath('directed', s) for s in gdelt_datasets]
 
-    # Ks = [100]
-    # versions = ['pgds']
-
-    Ks = [5, 10, 25, 50, 100]
-    versions = ['lds']
-
-    for dataset in icews_datasets + gdelt_datasets:
-        for mask_num in xrange(1, 5):
+    for mask_num in xrange(1, 6):
+        for dataset in icews_datasets + gdelt_datasets:
             masked_data_file = dataset.joinpath('masked_subset_%d.npz' % mask_num)
 
-            for K in Ks:
-                for version in versions:
+            for version in ['pgds', 'lds', 'gpdpfa']:
+                Ks = [5, 20, 50] if version == 'lds' else [50, 100]
+                num_itns = 10 if version == 'lds' else 6000
+
+                # for K in Ks:
+                for K in [5]:
                     model_depend = []
-                    for _ in xrange(4):
-                        if version == 'pgds':
-                            model_jid, out_dir = submit_train_job(data_file=masked_data_file,
-                                                                  K=K,
-                                                                  version=version,
-                                                                  num_itns=6000,
-                                                                  save_every=100,
-                                                                  save_after=4000,
-                                                                  eval_every=100,
-                                                                  eval_after=4000)
-                        elif version == 'lds':
-                            model_jid, out_dir = submit_train_job(data_file=masked_data_file,
-                                                                  K=K,
-                                                                  version=version,
-                                                                  num_itns=10)
+                    # for _ in xrange(4):
+                    for _ in xrange(1):
+                        model_jid, out_dir = submit_train_job(data_file=masked_data_file,
+                                                              K=K,
+                                                              version=version,
+                                                              num_itns=num_itns,
+                                                              save_after=0,
+                                                              eval_after=0)
                         model_depend.append(model_jid)
+            sys.exit()
 
 if __name__ == '__main__':
     main()
