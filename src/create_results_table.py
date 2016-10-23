@@ -27,7 +27,6 @@ def get_averaged_results(pattern='avg_smoothing_eval.txt'):
 
     print pattern
     for eval_file in glob(pattern):
-        print eval_file
         with open(eval_file) as f:
             lines = [line.rstrip() for line in f.readlines()]
             header = lines[0]
