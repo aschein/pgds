@@ -109,9 +109,7 @@ def main():
                         model_jid, out_dir = submit_train_job(data_file=masked_data_file,
                                                               K=K,
                                                               version=version,
-                                                              num_itns=num_itns,
-                                                              save_after=0,
-                                                              eval_after=0)
+                                                              num_itns=num_itns)
                         model_depend.append(model_jid)
 
 if __name__ == '__main__':
