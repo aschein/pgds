@@ -78,16 +78,18 @@ def foo(chain_results=False):
             name += '-%s' % pred_type
             print name
             print 'MODEL\tMRE\t\tMAE\t\tRMSE'
-            pattern = dataset_dir.joinpath('*/masked_subset_[1|2]/K_100/pgds')
-            if chain_results:
-                pattern = pattern.joinpath('[1-9]*_%s_eval.txt' % pred_type)
-                results = get_chain_results(pattern)
-            else:
-                pattern = pattern.joinpath('avg_%s_eval.txt' % pred_type)
-                results = get_averaged_results(pattern)
-            print 'pgds\t%f\t%f\t%f' % (np.mean(results['MRE']),
-                                        np.mean(results['MAE']),
-                                        np.mean(results['RMSE']))
+            for version in ['pgds', 'gpdpfa']:
+                pattern = dataset_dir.joinpath('*/masked_subset_[1|2]/K_100/%s' % version)
+                if chain_results:
+                    pattern = pattern.joinpath('[1-9]*_%s_eval.txt' % pred_type)
+                    results = get_chain_results(pattern)
+                else:
+                    pattern = pattern.joinpath('avg_%s_eval.txt' % pred_type)
+                    results = get_averaged_results(pattern)
+                print '%s\t%f\t%f\t%f' % (version,
+                                          np.mean(results['MRE']),
+                                          np.mean(results['MAE']),
+                                          np.mean(results['RMSE']))
             for K in [5, 10, 25, 50, 100]:
                 pattern = dataset_dir.joinpath('*/masked_subset_[1|2]/K_%d/lds' % K)
                 if chain_results:
