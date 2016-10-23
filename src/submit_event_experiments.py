@@ -94,14 +94,15 @@ def main():
     gdelt_datasets = ['%d-D' % year for year in gdelt_years]
     gdelt_datasets = [GDELT_DIR.joinpath('directed', s) for s in gdelt_datasets]
 
-    for mask_num in xrange(1, 6):
+    for mask_num in [1, 2, 5, 3, 4]:
         for dataset in icews_datasets + gdelt_datasets:
             masked_data_file = dataset.joinpath('masked_subset_%d.npz' % mask_num)
 
             for version in ['pgds', 'lds', 'gpdpfa']:
-                Ks = [5, 10, 25, 50] if version == 'lds' else [50, 100]
+                if mask_num == 5 and version == 'lds':
+                    continue
+                Ks = [5, 10, 25] if version == 'lds' else [100]
                 num_itns = 10 if version == 'lds' else 6000
-
                 for K in Ks:
                     model_depend = []
                     for _ in xrange(4):
