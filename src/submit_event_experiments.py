@@ -9,6 +9,9 @@ from subprocess import Popen, PIPE
 PYTHON_INSTALLATION = '~/py2/bin/python'
 ICEWS_DIR = path('/mnt/nfs/work1/wallach/aschein/data/icews/matrices')
 GDELT_DIR = path('/mnt/nfs/work1/wallach/aschein/data/gdelt/matrices')
+STOU_DIR = path('/mnt/nfs/work1/wallach/aschein/data/stou')
+NIPS_DIR = path('/mnt/nfs/work1/wallach/aschein/data/nips-data')
+DBLP_DIR = path('/mnt/nfs/work1/wallach/aschein/data/dblp')
 RESULTS_DIR = path('/mnt/nfs/work1/wallach/aschein/results/NIPS16/camera_ready')
 CODE_DIR = path('/home/aschein/research/pgds/src')
 
@@ -94,14 +97,17 @@ def main():
     gdelt_datasets = ['%d-D' % year for year in gdelt_years]
     gdelt_datasets = [GDELT_DIR.joinpath('directed', s) for s in gdelt_datasets]
 
+    text_datasets = [NIPS_DIR, STOU_DIR, DBLP_DIR]
+
     for mask_num in [1, 2, 5, 3, 4]:
-        for dataset in icews_datasets + gdelt_datasets:
+        # for dataset in icews_datasets + gdelt_datasets:
+        for dataset in text_datasets:
             masked_data_file = dataset.joinpath('masked_subset_%d.npz' % mask_num)
 
             for version in ['pgds', 'lds', 'gpdpfa']:
                 if mask_num == 5 and version == 'lds':
                     continue
-                Ks = [5, 10, 25] if version == 'lds' else [100]
+                Ks = [5, 10, 25] if version == 'lds' else [50, 100]
                 num_itns = 10 if version == 'lds' else 6000
                 for K in Ks:
                     model_depend = []
@@ -111,6 +117,7 @@ def main():
                                                               version=version,
                                                               num_itns=num_itns)
                         model_depend.append(model_jid)
+                        sys.exit()
 
 if __name__ == '__main__':
     main()
