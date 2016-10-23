@@ -42,19 +42,30 @@ def get_averaged_results(pattern='avg_smoothing_eval.txt'):
 
 
 def foo():
-    dataset_dirs = [RESULTS_DIR.joinpath(x) for x in ['gdelt/directed',  'icews/undirected', 'nips-data', 'dblp', 'stou']]
     data_names = ['gdelt', 'icews', 'nips', 'dblp', 'stou']
 
-    for dataset_dir, data_name in zip(dataset_dirs, data_names):
+    for data_name in data_names:
+        dataset_dir = RESULTS_DIR.joinpath(data_name)
+        if data_name == 'nips':
+            dataset_dir = RESULTS_DIR.joinpath('nips-data')
+        elif data_name == 'gdelt':
+            dataset_dir = RESULTS_DIR.joinpath('gdelt/directed')
+        elif data_name == 'icews':
+            dataset_dir = RESULTS_DIR.joinpath('icews/undirected')
+
         for pred_type in ['smoothing', 'forecast']:
-            name = '%s-%s' % (data_name, pred_type)
-            print name
+            print '%s-%s' % (data_name, pred_type)
             print 'MODEL\tMRE\t\tMAE\t\tRMSE'
             for version in ['pgds', 'gpdpfa', 'lds']:
                 K = 25 if version == 'lds' else 100
                 pattern = dataset_dir.joinpath('*/masked_subset_[1|2]/K_%d/%s' % (K, version))
                 pattern = pattern.joinpath('avg_%s_eval.txt' % pred_type)
                 results = get_averaged_results(pattern)
+
+                if not results['MRE']:
+                    print data_name, pred_type, version
+                    sys.exit()
+
                 print '%s\t%f\t%f\t%f' % (version,
                                           np.mean(results['MRE']),
                                           np.mean(results['MAE']),
