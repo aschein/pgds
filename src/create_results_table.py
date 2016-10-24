@@ -57,7 +57,7 @@ def foo():
             print '%s-%s' % (data_name, pred_type)
             print 'MODEL\tMRE\t\tMAE\t\tRMSE'
             for version in ['pgds', 'gpdpfa', 'lds']:
-                K = 25 if version == 'lds' else 100
+                K = 25 if version == 'lds' else 50
 
                 path_str = 'masked_subset_[3|4]/K_%d/%s' % (K, version)
                 if 'gdelt' in data_name or 'icews' in data_name:
