@@ -65,14 +65,16 @@ def submit_train_job(data_file, K=100, version='pgds', num_itns=6000,
     out_dir.makedirs_p()
 
     seed = rn.randint(1111111111)
-    if version in ['pgds', 'gpdpfa']:
+    if version in ['pgds', 'gpdpfa', 'orig-gpdpfa']:
         cmd = '%s %s ' % (PYTHON_INSTALLATION, CODE_DIR.joinpath('run_mcmc_model.py'))
         cmd += '-d=%s -o=%s -k=%d -v --version=%s ' % (data_file, out_dir, K, version)
-        cmd += '--stationary --steady --num_itns=%d --seed=%d --gam=%f ' % (num_itns, seed, 0.5 * K)
+        cmd += ' --steady --num_itns=%d --seed=%d --gam=%f ' % (num_itns, seed, 0.75 * K)
         cmd += '--save_every=%d --save_after=%d --eval_every=%d --eval_after=%d ' % (save_every,
                                                                                      save_after,
                                                                                      eval_every,
                                                                                      eval_after)
+        if version != 'orig-gpdpfa':
+            cmd += '--stationary '
 
     elif version == 'lds':
         cmd = '%s %s ' % (PYTHON_INSTALLATION, CODE_DIR.joinpath('lds.py'))
@@ -111,11 +113,8 @@ def main():
     #     for dataset in music_datasets:
     #         masked_data_file = dataset.joinpath('masked_subset_perc_%d.npz' % mask_num)
 
-            for version in ['pgds', 'lds', 'gpdpfa']:
+            for version in ['pgds', 'lds', 'gpdpfa', 'orig-gpdpfa']:
                 if mask_num == 5 and version == 'lds':
-                    continue
-
-                if version != 'pgds':
                     continue
 
                 if version == 'lds':

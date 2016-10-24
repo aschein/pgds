@@ -264,7 +264,7 @@ cdef class PGDS(MCMCModel):
 
         self.nu_ = 0
         for k in range(K):
-            nu_k = _sample_gamma(rng, 10., 0.1)
+            nu_k = _sample_gamma(rng, self.gam / float(K), 1. / self.beta)
             self.nu_K[k] = nu_k
             self.nu_ += nu_k
 
@@ -453,7 +453,7 @@ cdef class PGDS(MCMCModel):
                     mu_tv += self.Theta_TK[t, k] * self.Phi_KV[k, v]
                 mu_tv *= self.delta_T[t]
 
-                if (self.vals_P[p] == -1) and (self.total_itns > 250):
+                if (self.vals_P[p] == -1) and (self.total_itns > 500):
                     y_tv = gsl_ran_poisson(self.rng, mu_tv)
                 else:
                     y_tv = _sample_trunc_poisson(self.rng, mu_tv)
