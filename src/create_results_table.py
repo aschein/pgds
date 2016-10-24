@@ -55,7 +55,7 @@ def foo():
 
         for pred_type in ['smoothing', 'forecast']:
             print '%s-%s' % (data_name, pred_type)
-            print 'MODEL\tMRE\t\tMAE\t\tRMSE'
+            print 'MODEL\t\tMRE\t\tMAE\t\tRMSE'
             for version in ['pgds', 'gpdpfa', 'orig-gpdpfa', 'lds']:
                 K = 25 if version == 'lds' else 100
 
@@ -68,7 +68,7 @@ def foo():
                 if not results['MAE']:
                     continue
 
-                print '%s\t%f\t%f\t%f' % (version,
+                print '%s\t\t%f\t%f\t%f' % (version,
                                           np.mean(results['MRE']),
                                           np.mean(results['MAE']),
                                           np.mean(results['RMSE']))
