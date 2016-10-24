@@ -55,7 +55,7 @@ def foo():
 
         for pred_type in ['smoothing', 'forecast']:
             print '%s-%s' % (data_name, pred_type)
-            print 'MODEL\t\tMRE\t\tMAE\t\tRMSE'
+            print 'MODEL\tMRE\t\tMAE\t\tRMSE'
             for version in ['pgds', 'gpdpfa', 'orig-gpdpfa', 'lds']:
                 K = 25 if version == 'lds' else 100
 
