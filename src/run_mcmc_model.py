@@ -135,7 +135,7 @@ def main():
     p.add_argument('--save_every', type=int, default=100)
     p.add_argument('--eval_after', type=int, default=4000)
     p.add_argument('--eval_every', type=int, default=100)
-    p.add_argument('--version', type=str, default='gds', choices=['pgds', 'gpdpfa'])
+    p.add_argument('--version', type=str, default='gds', choices=['pgds', 'gpdpfa', 'orig-gpdpfa'])
     args = p.parse_args()
 
     data_dict = np.load(args.data)
@@ -177,13 +177,14 @@ def main():
                   'Theta_TK': 20,
                   'beta': 60,
                   'xi_K': 70}
-    else:
+
+    elif args.version in ['gpdpfa', 'orig-gpdpfa']:
         model = GPDPFA(T=T+1,
                        V=V,
                        K=args.n_components,
                        e=args.eps,
                        f=args.eps,
-                       stationary=int(args.stationary),
+                       stationary=int(args.version == 'gpdpfa'),
                        binary=int(args.binary),
                        seed=args.seed)
         burnin = {}
