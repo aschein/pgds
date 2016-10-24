@@ -57,7 +57,7 @@ def foo():
             print '%s-%s' % (data_name, pred_type)
             print 'MODEL\tMRE\t\tMAE\t\tRMSE'
             for version in ['pgds', 'gpdpfa', 'orig-gpdpfa', 'lds']:
-                K = 25 if version == 'lds' else 50
+                K = 25 if version == 'lds' else 100
 
                 path_str = 'masked_subset_[1|2]/K_%d/%s' % (K, version)
                 if 'gdelt' in data_name or 'icews' in data_name:
@@ -65,6 +65,8 @@ def foo():
                 pattern = dataset_dir.joinpath(path_str)
                 pattern = pattern.joinpath('avg_%s_eval.txt' % pred_type)
                 results = get_averaged_results(pattern)
+                if not results['MAE']:
+                    continue
 
                 print '%s\t%f\t%f\t%f' % (version,
                                           np.mean(results['MRE']),
