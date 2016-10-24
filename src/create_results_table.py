@@ -68,7 +68,8 @@ def foo():
                 if not results['MAE']:
                     continue
 
-                print '%s\t\t%f\t%f\t%f' % (version,
+                vstr = version if version != 'orig-gpdpfa' else 'ogpdpfa'
+                print '%s\t%f\t%f\t%f' % (vstr,
                                           np.mean(results['MRE']),
                                           np.mean(results['MAE']),
                                           np.mean(results['RMSE']))
