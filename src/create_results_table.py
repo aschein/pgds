@@ -56,7 +56,7 @@ def foo():
         for pred_type in ['smoothing', 'forecast']:
             print '%s-%s' % (data_name, pred_type)
             print 'MODEL\tMRE\t\tMAE\t\tRMSE'
-            for version in ['pgds', 'gpdpfa', 'lds']:
+            for version in ['pgds', 'gpdpfa', 'orig-gpdpfa', 'lds']:
                 K = 25 if version == 'lds' else 50
 
                 path_str = 'masked_subset_[1|2]/K_%d/%s' % (K, version)
