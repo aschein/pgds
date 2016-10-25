@@ -136,7 +136,7 @@ def print_latex_table():
             print line_str
 
         with open('all_results.p', 'w+') as f:
-            pickle.dump(f, all_results)
+            pickle.dump(all_results, f)
 
 if __name__ == '__main__':
     p = ArgumentParser()
