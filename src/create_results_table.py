@@ -118,7 +118,7 @@ def print_latex_table():
                     stds[error_metric].append(results[error_metric])
 
             for error_metric in ['MAE', 'MRE', 'RMSE']:
-                for m, model_mean, model_std in enumerate(zip(means[error_metric], stds[error_metric])):
+                for m, (model_mean, model_std) in enumerate(zip(means[error_metric], stds[error_metric])):
                     if np.argmin(error_metric) == m:
                         line_str += '& $\mathbf{%f}$ $\\mathsmaller{\\pm %f}$ ' % (model_mean, model_std)
                     else:
