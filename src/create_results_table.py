@@ -118,7 +118,7 @@ def print_latex_table():
                     stds[error_metric].append(np.std(results[error_metric]))
 
             for error_metric in ['MAE', 'MRE', 'RMSE']:
-                print means[error_metric], np.argmin(means[error_metric])
+                # print means[error_metric], np.argmin(means[error_metric])
                 for m, (model_mean, model_std) in enumerate(zip(means[error_metric], stds[error_metric])):
                     if np.argmin(means[error_metric]) == m:
                         line_str += '& $\mathbf{%.2f}$ $\\mathsmaller{\\pm %.2f}$ ' % (model_mean, model_std)
