@@ -75,9 +75,60 @@ def foo():
                                           np.mean(results['RMSE']))
             print
 
+
+def print_latex_table():
+    data_names = ['gdelt', 'icews', 'nips', 'dblp', 'stou']
+
+    for data_name in data_names:
+        dataset_dir = RESULTS_DIR.joinpath(data_name)
+        if data_name == 'nips':
+            dataset_dir = RESULTS_DIR.joinpath('nips-data')
+            data_str = 'NIPS'
+        elif data_name == 'gdelt':
+            dataset_dir = RESULTS_DIR.joinpath('gdelt/directed')
+            data_str = 'GDELT'
+        elif data_name == 'icews':
+            dataset_dir = RESULTS_DIR.joinpath('icews/undirected')
+            data_str = 'ICEWS'
+        elif data_name == 'dblp':
+            data_str = 'DBLP'
+        elif data_name == 'stou':
+            data_str = 'SOTU'
+
+        for pred_type in ['smoothing', 'forecast']:
+            pred_str = '-S' if pred_type == 'smoothing' else '-F'
+
+            line_str = '\\scriptsize{%s%s} ' % (data_str, pred_str)
+
+            means = defaultdict(list)
+            stds = defaultdict(list)
+            for version in ['pgds', 'gpdpfa', 'lds']:
+                K = 25 if version == 'lds' else 100
+
+                path_str = 'masked_subset_[3|4]/K_%d/%s' % (K, version)
+                if 'gdelt' in data_name or 'icews' in data_name:
+                    path_str = '*/' + path_str
+                pattern = dataset_dir.joinpath(path_str)
+                pattern = pattern.joinpath('avg_%s_eval.txt' % pred_type)
+                results = get_averaged_results(pattern)
+                assert results['MAE']
+
+                for error_metric in ['MAE', 'MRE', 'RMSE']:
+                    means[error_metric].append(results[error_metric])
+                    stds[error_metric].append(results[error_metric])
+
+            for error_metric in ['MAE', 'MRE', 'RMSE']:
+                for m, model_mean, model_std in enumerate(zip(means[error_metric], std[error_metric])):
+                    if np.argmin(error_metric) == m:
+                        line_str += '& $\mathbf{%f}$ $\\mathsmaller{\\pm %f}$ ' % (model_mean, model_std)
+                    else:
+                        line_str += '& %f $\\mathsmaller{\\pm %f}$ ' % (model_mean, model_std)
+            line_str += '\\\\'
+            print line_str
+
 if __name__ == '__main__':
     p = ArgumentParser()
     p.add_argument('-p', '--pattern', type=str, required=False)
     args = p.parse_args()
 
-    foo()
+    print_latex_table()
