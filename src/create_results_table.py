@@ -1,11 +1,13 @@
 import os
 import sys
 import numpy as np
+import cPickle as pickle
 
 from glob import glob
 from path import path
 from argparse import ArgumentParser
 from collections import defaultdict
+
 
 RESULTS_DIR = path('/mnt/nfs/work1/wallach/aschein/results/NIPS16/camera_ready')
 
@@ -79,6 +81,8 @@ def foo():
 def print_latex_table():
     data_names = ['gdelt', 'icews', 'nips', 'dblp', 'stou']
 
+    all_results = {}
+
     for data_name in data_names:
         dataset_dir = RESULTS_DIR.joinpath(data_name)
         if data_name == 'nips':
@@ -97,6 +101,8 @@ def print_latex_table():
 
         for pred_type in ['smoothing', 'forecast']:
             pred_str = '-S' if pred_type == 'smoothing' else '-F'
+
+            all_results[data_str + pred_str] = defaultdict(dict)
 
             line_str = '\\scriptsize{%s%s} ' % (data_str, pred_str)
 
@@ -117,6 +123,8 @@ def print_latex_table():
                     means[error_metric].append(np.mean(results[error_metric]))
                     stds[error_metric].append(np.std(results[error_metric]))
 
+                    all_results[version][error_metric] = results[error_metric]
+
             for error_metric in ['MAE', 'MRE', 'RMSE']:
                 # print means[error_metric], np.argmin(means[error_metric])
                 for m, (model_mean, model_std) in enumerate(zip(means[error_metric], stds[error_metric])):
@@ -126,6 +134,9 @@ def print_latex_table():
                         line_str += '& %.2f $\\mathsmaller{\\pm %.2f}$ ' % (model_mean, model_std)
             line_str += '\\\\'
             print line_str
+
+        with open('all_results.p', 'w+') as f:
+            pickle.dump(f, all_results)
 
 if __name__ == '__main__':
     p = ArgumentParser()
