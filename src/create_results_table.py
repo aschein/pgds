@@ -59,7 +59,7 @@ def foo():
             for version in ['pgds', 'gpdpfa', 'orig-gpdpfa', 'lds']:
                 K = 25 if version == 'lds' else 100
 
-                path_str = 'masked_subset_[1|2]/K_%d/%s' % (K, version)
+                path_str = 'masked_subset_[3|4]/K_%d/%s' % (K, version)
                 if 'gdelt' in data_name or 'icews' in data_name:
                     path_str = '*/' + path_str
                 pattern = dataset_dir.joinpath(path_str)
