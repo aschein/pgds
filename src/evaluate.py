@@ -31,7 +31,7 @@ def get_data_for_results_dir(results_dir):
 def save_avg_forecast_eval(results_dir):
     _, data_SV, _ = get_data_for_results_dir(results_dir)
 
-    forecast_files = glob(results_dir.joinpath('*[1-9]*_forecast*.npz'))
+    forecast_files = glob(results_dir.joinpath('*[1-4]*_forecast*.npz'))
     forecast_files = [x for x in forecast_files if '0_forecast' not in x]  # exclude 0th forecast
     if forecast_files:
         avg_pred_SV = np.zeros_like(data_SV, dtype=float)
@@ -54,7 +54,7 @@ def save_avg_smoothing_eval(results_dir):
     data_TV, _, mask_TV = get_data_for_results_dir(results_dir)
     data_N = data_TV[mask_TV]
 
-    smoothed_files = glob(results_dir.joinpath('*[1-9]*_smoothed*.npz'))
+    smoothed_files = glob(results_dir.joinpath('*[1-4]*_smoothed*.npz'))
     smoothed_files = [x for x in smoothed_files if '0_smoothed' not in x]  # exclude 0th forecast
     if smoothed_files:
         avg_pred_N = np.zeros_like(data_N, dtype=float)
