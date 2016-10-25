@@ -123,7 +123,7 @@ def print_latex_table():
                     means[error_metric].append(np.mean(results[error_metric]))
                     stds[error_metric].append(np.std(results[error_metric]))
 
-                    all_results[version][error_metric] = results[error_metric]
+                    all_results[data_str + pred_str][version][error_metric] = results[error_metric]
 
             for error_metric in ['MAE', 'MRE', 'RMSE']:
                 # print means[error_metric], np.argmin(means[error_metric])
