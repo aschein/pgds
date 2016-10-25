@@ -114,8 +114,8 @@ def print_latex_table():
                 assert results['MAE']
 
                 for error_metric in ['MAE', 'MRE', 'RMSE']:
-                    means[error_metric].append(results[error_metric])
-                    stds[error_metric].append(results[error_metric])
+                    means[error_metric].append(np.mean(results[error_metric]))
+                    stds[error_metric].append(np.std(results[error_metric]))
 
             for error_metric in ['MAE', 'MRE', 'RMSE']:
                 for m, (model_mean, model_std) in enumerate(zip(means[error_metric], stds[error_metric])):
