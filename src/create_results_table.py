@@ -130,9 +130,9 @@ def print_latex_table():
                 # print means[error_metric], np.argmin(means[error_metric])
                 for m, (model_mean, model_std) in enumerate(zip(means[error_metric], stds[error_metric])):
                     if np.argmin(means[error_metric]) == m:
-                        line_str += '& $\mathbf{%.2f}$ $\\mathsmaller{\\pm %.2f}$ ' % (model_mean, model_std)
+                        line_str += '& $\mathbf{%.3f}$ $\\mathsmaller{\\pm %.2f}$ ' % (model_mean, model_std)
                     else:
-                        line_str += '& %.2f $\\mathsmaller{\\pm %.2f}$ ' % (model_mean, model_std)
+                        line_str += '& %.3f $\\mathsmaller{\\pm %.2f}$ ' % (model_mean, model_std)
             line_str += '\\\\'
             print line_str
 
