@@ -20,7 +20,7 @@ text_datasets = [NIPS_DIR, STOU_DIR, DBLP_DIR]
 
 if __name__ == '__main__':
     for data_dir in gdelt_datasets + icews_datasets + text_datasets:
-        Y_TV = data_dir.joinpath('masked_subset_3.npz')['data']
+        Y_TV = np.load(data_dir.joinpath('masked_subset_3.npz'))['data']
         Y_TV = Y_TV.astype(float)  # necessary to cast from unsigned ints to do np.diff
         assert Y_TV.shape[1] == 1000
 
