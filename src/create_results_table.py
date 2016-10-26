@@ -79,7 +79,7 @@ def foo():
 
 
 def print_latex_table():
-    data_names = ['gdelt', 'icews', 'nips', 'dblp', 'stou']
+    data_names = ['gdelt', 'icews', 'stou', 'dblp',  'nips']
 
     all_results = {}
 
