@@ -56,4 +56,4 @@ if __name__ == '__main__':
         assert Y_TV.shape[1] == 1000
 
         b = burstiness(Y_TV)
-        print '%f: %s' % (burstiness, name)
+        print '%f: %s' % (b, name)
