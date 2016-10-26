@@ -120,13 +120,13 @@ def print_latex_table():
                 if not results['MAE']:
                     continue
 
-                for error_metric in ['MAE', 'MRE', 'RMSE']:
+                for error_metric in ['MRE', 'MAE', 'RMSE']:
                     means[error_metric].append(np.mean(results[error_metric]))
                     stds[error_metric].append(np.std(results[error_metric]))
 
                     all_results[data_str + pred_str][version][error_metric] = results[error_metric]
 
-            for error_metric in ['MAE', 'MRE', 'RMSE']:
+            for error_metric in ['MRE', 'MAE', 'RMSE']:
                 # print means[error_metric], np.argmin(means[error_metric])
                 for m, (model_mean, model_std) in enumerate(zip(means[error_metric], stds[error_metric])):
                     if np.argmin(means[error_metric]) == m:
