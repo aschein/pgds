@@ -34,7 +34,7 @@ if __name__ == '__main__':
         assert Y_TV.shape[1] == 1000
         b += burstiness(Y_TV)
     b /= len(gdelt_datasets)
-    print '%f: gdelt' % burstiness
+    print '%f: gdelt' % b
 
     b = 0
     for data_dir in icews_datasets:
@@ -42,7 +42,7 @@ if __name__ == '__main__':
         assert Y_TV.shape[1] == 1000
         b += burstiness(Y_TV)
     b /= len(gdelt_datasets)
-    print '%f: icews' % burstiness
+    print '%f: icews' % b
 
     for data_dir in text_datasets:
         if 'stou' in data_dir:
