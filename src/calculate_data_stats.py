@@ -19,6 +19,7 @@ gdelt_datasets = [GDELT_DIR.joinpath('directed', s) for s in gdelt_datasets]
 text_datasets = [NIPS_DIR, STOU_DIR, DBLP_DIR]
 
 if __name__ == '__main__':
+    print 'BURSTINESS\tOVERDISPERSION\tTIME-OVERDISPERSION\tDATA SET'
     for data_dir in gdelt_datasets + icews_datasets + text_datasets:
         Y_TV = np.load(data_dir.joinpath('masked_subset_3.npz'))['data']
         Y_TV = Y_TV.astype(float)  # necessary to cast from unsigned ints to do np.diff
@@ -26,7 +27,15 @@ if __name__ == '__main__':
 
         mu_V = Y_TV.mean(axis=0)
         D_TV = np.abs(np.diff(Y_TV, axis=0))
-        B_V = D_TV / mu_V
+        burstiness = (D_TV / mu_V).mean()
+        overall_od = Y_TV.var() / Y_TV.mean()
+        across_t_od = (Y_TV.var(axis=0) / Y_TV.mean(axis=0)).mean()
+
+        dataset = data_dir.split('/mnt/nfs/work1/wallach/aschein/data/')[1]
+
+        print '%f\t%f\t%f\t%s' % (burstiness, overall_od, across_t_od, dataset)
+
+
 
         print B_V.mean(), B_V.std(), data_dir
 
