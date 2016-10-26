@@ -35,8 +35,4 @@ if __name__ == '__main__':
 
         print '%f\t%f\t%f\t%s' % (burstiness, overall_od, across_t_od, dataset)
 
-
-
-        print B_V.mean(), B_V.std(), data_dir
-
     embed()
