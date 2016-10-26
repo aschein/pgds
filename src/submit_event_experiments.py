@@ -102,20 +102,18 @@ def main():
 
     text_datasets = [NIPS_DIR, STOU_DIR, DBLP_DIR]
 
-    music_datasets = MUSIC_DIR.listdir('*train_4*') + MUSIC_DIR.listdir('*train_3*')
+    music_datasets = MUSIC_DIR.listdir('*train_1*') + MUSIC_DIR.listdir('*train_2*')
 
-    for mask_num in [1, 2, 5, 3, 4]:
-        for dataset in icews_datasets + gdelt_datasets + text_datasets:
-        # for dataset in text_datasets:
-            masked_data_file = dataset.joinpath('masked_subset_%d.npz' % mask_num)
+    # for mask_num in [1, 2, 5, 3, 4]:
+    #     for dataset in icews_datasets + gdelt_datasets + text_datasets:
+    #     # for dataset in text_datasets:
+    #         masked_data_file = dataset.joinpath('masked_subset_%d.npz' % mask_num)
 
-    # for mask_num in [1, 2, 3]:
-    #     for dataset in music_datasets:
-    #         masked_data_file = dataset.joinpath('masked_subset_perc_%d.npz' % mask_num)
+    for mask_num in [1, 2, 3]:
+        for dataset in music_datasets:
+            masked_data_file = dataset.joinpath('masked_subset_perc_%d.npz' % mask_num)
 
-            for version in ['pgds', 'lds', 'gpdpfa', 'orig-gpdpfa']:
-                if version != 'orig-gpdpfa':
-                    continue
+            for version in ['pgds', 'lds', 'gpdpfa']:
 
                 if mask_num == 5 and version == 'lds':
                     continue
