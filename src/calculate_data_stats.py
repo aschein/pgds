@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     b = 0
     for data_dir in gdelt_datasets:
-        Y_TV = np.load(data_dir.joinpath('masked_subset_3.npz'))['data']
+        Y_TV = np.load(data_dir.joinpath('masked_subset_5.npz'))['data']
         assert Y_TV.shape[1] == 1000
         b += burstiness(Y_TV)
     b /= len(gdelt_datasets)
@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
     b = 0
     for data_dir in icews_datasets:
-        Y_TV = np.load(data_dir.joinpath('masked_subset_3.npz'))['data']
+        Y_TV = np.load(data_dir.joinpath('masked_subset_5.npz'))['data']
         assert Y_TV.shape[1] == 1000
         b += burstiness(Y_TV)
     b /= len(gdelt_datasets)
@@ -52,7 +52,7 @@ if __name__ == '__main__':
         else:
             name = 'nips'
 
-        Y_TV = np.load(data_dir.joinpath('masked_subset_3.npz'))['data']
+        Y_TV = np.load(data_dir.joinpath('masked_subset_5.npz'))['data']
         assert Y_TV.shape[1] == 1000
 
         b = burstiness(Y_TV)
