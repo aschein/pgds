@@ -140,8 +140,13 @@ def main():
 
     data_dict = np.load(args.data)
     data = data_dict['data']
-    mask = data_dict['mask']
+
+    mask = np.zeros_like(data).astype(bool)
+    if 'mask' in data_dict.keys():
+        mask = data_dict['mask']
+
     data_TV, data_SV = get_train_forecast_split(data, mask)
+
     T, V = data_TV.shape
     if data_SV is not None:
         S = data_SV.shape[0]
