@@ -96,7 +96,9 @@ def main():
     icews_datasets = ['%d-D' % year for year in icews_years]
     icews_datasets = [ICEWS_DIR.joinpath('undirected', s) for s in icews_datasets]
 
-    for dataset in icews_datasets:
+    gdelt_datasets = [GDELT_DIR.joinpath('undirected', s) for s in icews_datasets]
+
+    for dataset in gdelt_datasets:
         data_file = dataset.joinpath('data.npz')
 
         for version in ['pgds', 'lds']:
