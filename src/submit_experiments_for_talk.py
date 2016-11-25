@@ -92,10 +92,11 @@ def submit_train_job(data_file, K=100, version='pgds', num_itns=6000,
 
 
 def main():
-    icews_years = [2001, 2003, 2006, 2009, 2011]
-    icews_datasets = ['%d-D' % year for year in icews_years]
+    years = [2001, 2003, 2006, 2009, 2011]
+    icews_datasets = ['%d-D' % year for year in years]
     icews_datasets = [ICEWS_DIR.joinpath('undirected', s) for s in icews_datasets]
 
+    gdelt_datasets = ['%d-D' % year for year in years]
     gdelt_datasets = [GDELT_DIR.joinpath('undirected', s) for s in icews_datasets]
 
     for dataset in gdelt_datasets:
