@@ -97,7 +97,7 @@ def main():
     icews_datasets = [ICEWS_DIR.joinpath('undirected', s) for s in icews_datasets]
 
     gdelt_datasets = ['%d-D' % year for year in years]
-    gdelt_datasets = [GDELT_DIR.joinpath('undirected', s) for s in icews_datasets]
+    gdelt_datasets = [GDELT_DIR.joinpath('undirected', s) for s in gdelt_datasets]
 
     for dataset in gdelt_datasets:
         data_file = dataset.joinpath('data.npz')
