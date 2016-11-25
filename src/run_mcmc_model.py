@@ -246,7 +246,7 @@ def main():
             state_name = '%d_state_%d.npz' % (chain, itn)
             np.savez(args.out.joinpath(state_name), **dict(model.get_state()))
 
-        if itns_to_eval[itn]:
+        if itns_to_eval[itn] and masked_data.mask.any():
             eval_path = args.out.joinpath('%d_smoothing_eval.txt' % chain)
             pred_path = args.out.joinpath('%d_smoothed_%d.npz' % (chain, itn))
             save_smoothing_eval(masked_data, model, eval_path, pred_path)
