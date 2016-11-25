@@ -139,7 +139,7 @@ def main():
     args = p.parse_args()
 
     data_dict = np.load(args.data)
-    data = data_dict['data']
+    data = data_dict['data'] if 'data' in data_dict.keys() else data_dict['Y']
 
     mask = np.zeros_like(data).astype(bool)
     if 'mask' in data_dict.keys():
