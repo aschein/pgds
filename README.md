@@ -38,5 +38,5 @@ SOFTWARE.
 * argparse
 * path
 * scikit-learn
-* scikit-tensor
 * cython
+* GSL
