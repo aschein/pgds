@@ -26,11 +26,10 @@ SOFTWARE.
 ## What's included:
 
 * [pgds.pyx](https://github.com/aschein/pgds/blob/master/src/pgds.pyx): The main code file.  Implements Gibbs sampling inference for PGDS.
-* [mcmc_model.pyx](https://github.com/aschein/pgds/blob/master/src/pgds.pyx): Implements Cython interface for MCMC models.  Inherited by pgds.pyx.
-* [sample.pyx](https://github.com/aschein/pgds/blob/master/src/pgds.pyx): Implements fast Cython method for sampling various distributions.
-* [lambertw.pyx](https://github.com/aschein/pgds/blob/master/src/pgds.pyx): Code for computing the Lambert-W function.
-* [pgds.pyx](https://github.com/aschein/pgds/blob/master/src/pgds.pyx): The main code file.  Implements Gibbs sampling inference for PGDS.
-* [setup.py](https://github.com/aschein/pgds/blob/master/src/setup.py): Setup file for compiling Cython.
+* [mcmc_model.pyx](https://github.com/aschein/pgds/blob/master/src/mcmc_model.pyx): Implements Cython interface for MCMC models.  Inherited by pgds.pyx.
+* [sample.pyx](https://github.com/aschein/pgds/blob/master/src/sample.pyx): Implements fast Cython method for sampling various distributions.
+* [lambertw.pyx](https://github.com/aschein/pgds/blob/master/src/lambertw.pyx): Code for computing the Lambert-W function.
+* [Makefile](https://github.com/aschein/pgds/blob/master/src/Makefile): Makefile (cd into this directoy and type 'make' to compile).
 
 ## Dependencies:
 
