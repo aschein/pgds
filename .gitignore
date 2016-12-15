@@ -87,3 +87,10 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+## Custom
+src/lambertw.c
+src/mcmc_model.c
+src/pgds.c
+src/sample.c
+
