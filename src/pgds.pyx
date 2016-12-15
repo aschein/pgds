@@ -104,8 +104,6 @@ cdef class PGDS(MCMCModel):
         self.subs_P2 = np.zeros((self.P, 2), dtype=np.int32)
         self.vals_P = np.zeros(self.P, dtype=np.int32)
 
-        
-
     def fit(self, data, num_itns=1000, verbose=True, initialize=True, burnin={}):
         if not isinstance(data, np.ma.core.MaskedArray):
             data = np.ma.array(data, mask=None)
