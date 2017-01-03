@@ -24,17 +24,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ## What's included:
-
 * [pgds.pyx](https://github.com/aschein/pgds/blob/master/src/pgds.pyx): The main code file.  Implements Gibbs sampling inference for PGDS.
 * [mcmc_model.pyx](https://github.com/aschein/pgds/blob/master/src/mcmc_model.pyx): Implements Cython interface for MCMC models.  Inherited by pgds.pyx.
 * [sample.pyx](https://github.com/aschein/pgds/blob/master/src/sample.pyx): Implements fast Cython method for sampling various distributions.
 * [lambertw.pyx](https://github.com/aschein/pgds/blob/master/src/lambertw.pyx): Code for computing the Lambert-W function.
 * [Makefile](https://github.com/aschein/pgds/blob/master/src/Makefile): Makefile (cd into this directoy and type 'make' to compile).
-* [icews_example.ipynb](https://github.com/aschein/pgds/blob/master/src/icews_example.ipynb): Jupyter notebook with an examples of how to use the code to run PGDS on ICEWS data for exploratory and predictive analyses. 
-## Dependencies:
+* [icews_example.ipynb](https://github.com/aschein/pgds/blob/master/src/icews_example.ipynb): Jupyter notebook with an examples of how to use the code to run PGDS on ICEWS data for exploratory and predictive analyses.
 
+## Dependencies:
 * numpy
 * scipy
+* matplotlib
+* seaborn
+* pandas
 * argparse
 * path
 * scikit-learn
