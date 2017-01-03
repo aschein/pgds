@@ -35,6 +35,9 @@ SOFTWARE.
 
 * numpy
 * scipy
+* matplotlib
+* seaborn
+* pandas
 * argparse
 * path
 * scikit-learn
