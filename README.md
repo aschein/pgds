@@ -1,5 +1,5 @@
 # Poisson-Gamma Dynamical Systems
-Source code for the paper: [Poisson-Gamma Dynamical Systems] (http://people.cs.umass.edu/~aschein/ScheinZhouWallach2016_paper.pdf) by Aaron Schein, Mingyuan Zhou, and Hanna Wallach, to appear at NIPS 2016.
+Source code for the paper: [Poisson-Gamma Dynamical Systems] (http://people.cs.umass.edu/~aschein/ScheinZhouWallach2016_paper.pdf) by Aaron Schein, Mingyuan Zhou, and Hanna Wallach, presented at NIPS 2016.
 
 The MIT License (MIT)
 
