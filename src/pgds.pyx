@@ -15,7 +15,7 @@ from libc.math cimport exp, log, log1p, expm1
 
 from mcmc_model cimport MCMCModel
 from sample cimport _sample_gamma, _sample_dirichlet, _sample_lnbeta,\
-                              _sample_crt, _sample_trunc_poisson
+                    _sample_crt, _sample_trunc_poisson
 
 from lambertw cimport _simulate_zeta
 from impute import init_missing_data
