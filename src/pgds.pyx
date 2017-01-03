@@ -53,6 +53,7 @@ cdef class PGDS(MCMCModel):
                  double tau=1., int shrink=1, int stationary=0, int steady=0,
                  int binary=0, object seed=None):
 
+        self.print_every = 25
         super(PGDS, self).__init__(seed)
         
         self.T = self.param_list['T'] = T
